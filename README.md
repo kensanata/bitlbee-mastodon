@@ -36,7 +36,7 @@ Build dependencies
 
 - `autotools` (if building from git)
 
-  A bit of an overkill, but autotools is the build system of choice now, sorry.
+  A bit of an overkill, but it works.
 
 
 Building and Installing
@@ -58,7 +58,7 @@ $ sudo make install
 ```
 
 If your Bitlbee's plugindir is in non-standard location you can specify it by
-calling ./configure with --with-plugindir=/path/to/plugindir option.
+calling `./configure with --with-plugindir=/path/to/plugindir` option.
 
 Debugging
 ---------
