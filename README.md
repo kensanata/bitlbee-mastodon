@@ -1,22 +1,16 @@
-Mastodon protocol plugin for Bitlbee.
+Mastodon plugin for Bitlbee
+---------------------------
 
-License
--------
+This plugin is distributed under the [GPLv2 license](LICENSE).
 
-The Bitlbee Mastodon plugin is distributed under the GPLv2 license.
+Usage
+-----
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or
-(at your option) any later version.
+Please refer to the Bitlbee help system:
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+```
+> help mastodon
+```
 
 Build dependencies
 ------------------
@@ -58,15 +52,6 @@ $ sudo make install
 
 If your Bitlbee's plugindir is in non-standard location you can specify it by
 calling ./configure with --with-plugindir=/path/to/plugindir option.
-
-Usage
------
-
-Please refer to the help system:
-
-```
-> help mastodon
-```
 
 Debugging
 ---------
