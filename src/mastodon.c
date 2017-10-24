@@ -30,6 +30,60 @@
 #include "mastodon-http.h"
 #include "mastodon-lib.h"
 #include "url.h"
+#include "help.h"
+
+#define HELPFILE_NAME "mastodon-help.txt"
+
+static void mastodon_help_init()
+{
+  /* Figure out where our help file is by looking at the global helpfile. */
+  gchar *dir = g_path_get_dirname (global.helpfile);
+  if (strcmp(dir, ".") == 0) {
+    log_message(LOGLVL_WARNING, "Error finding the directory of helpfile %s.", global.helpfile);
+    g_free(dir);
+    return;
+  }
+  gchar *df = g_strjoin("/", dir, HELPFILE_NAME, NULL);
+  g_free(dir);
+
+  /* Load help from our own help file. */
+  help_t *dh;
+  help_init(&dh, df);
+  if(dh == NULL) {
+    log_message(LOGLVL_WARNING, "Error opening helpfile: %s.", df);
+    g_free(df);
+    return;
+  }
+  g_free(df);
+
+  /* Link the last entry of global.help with first entry of our help. */
+  help_t *h, *l = NULL;
+  for (h = global.help; h; h = h->next) {
+    l = h;
+  }
+  if (l) {
+    l->next = dh;
+  } else {
+    /* No global help but ours? */
+    global.help = dh;
+  }
+}
+
+#ifdef BITLBEE_ABI_VERSION_CODE
+struct plugin_info *init_plugin_info(void)
+{
+  static struct plugin_info info = {
+    BITLBEE_ABI_VERSION_CODE,
+    "bitlbee-mastodon",
+    "0.1.0",
+    "Bitlbee plugin for Mastodon <https://joinmastodon.org/>",
+    "Alex Schroeder <alex@gnu.org>",
+    "https://github.com/kensanata/bitlbee-mastodon"
+  };
+
+  return &info;
+}
+#endif
 
 GSList *mastodon_connections = NULL;
 
@@ -207,6 +261,8 @@ static void mastodon_init(account_t * acc)
 
 	s = set_add(&acc->set, "consumer_secret", "", NULL, acc);
 	s->flags |= SET_HIDDEN;
+
+	mastodon_help_init();
 }
 
 /**
@@ -1206,8 +1262,7 @@ void mastodon_log(struct im_connection *ic, char *format, ...)
 	g_free(text);
 }
 
-
-void mastodon_initmodule()
+G_MODULE_EXPORT void init_plugin(void)
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
 
