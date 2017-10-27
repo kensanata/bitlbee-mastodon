@@ -368,6 +368,31 @@ struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 	return NULL;
 }
 
+/* This is based on strip_html but in addition to what Bitlbee does, we treat p like br. */
+void mastodon_strip_html(char *in)
+{
+	char *start = in;
+	char out[strlen(in) + 1];
+	char *s = out;
+
+	memset(out, 0, sizeof(out));
+
+	while (*in) {
+		if (*in == '<') {
+			if (g_strncasecmp(in + 1, "/p>", 3) == 0) {
+				*(s++) = '\n';
+				in += 4;
+			} else {
+				*(s++) = *(in++);
+			}
+		} else {
+			*(s++) = *(in++);
+		}
+	}
+	strcpy(start, out);
+	strip_html(start);
+}
+
 /**
  * Function to fill a mastodon_status struct.
  */
@@ -523,7 +548,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 
 		ms->text = g_string_free(s, FALSE); // we keep the data
 
-		strip_html(ms->text);
+		mastodon_strip_html(ms->text);
 	}
 
 	g_slist_free(media); // elements are pointers into node and don't need to be freed
@@ -1406,7 +1431,7 @@ static void mastodon_log_array(struct im_connection *ic, json_value *node, int p
 			break;
 		case json_string:
 			s = g_strdup(v->u.string.ptr);
-			strip_html(s);
+			mastodon_strip_html(s);
 			mastodon_log(ic, "%s%s", indent(prefix), s);
 			g_free(s);
 			break;
@@ -1458,7 +1483,7 @@ static void mastodon_log_object(struct im_connection *ic, json_value *node, int 
 			break;
 		case json_string:
 			s = g_strdup(v->u.string.ptr);
-			strip_html(s);
+			mastodon_strip_html(s);
 			mastodon_log(ic, "%s%s: %s", indent(prefix), k, s);
 			g_free(s);
 			break;
