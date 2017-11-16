@@ -39,7 +39,8 @@ Build dependencies
 
 - `autotools` (if building from git)
 
-  A bit of an overkill, but it works.
+  A bit of an overkill, but it works. If you don't have this package,
+  try looking for `autoconf` and `libtool`.
 
 
 Building and Installing
