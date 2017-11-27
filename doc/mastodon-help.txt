@@ -200,3 +200,4 @@ Here's how to subscribe to #hashtag for the account mastodon. The chat add
 Don't forget to save your config.
 
 Note that where as you can still issue commands in these hashtag channels, the output is going to appear in the original account channel.
+%
