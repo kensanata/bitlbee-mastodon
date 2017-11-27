@@ -36,7 +36,9 @@
 #define MASTODON_VERIFY_CREDENTIALS_URL "/accounts/verify_credentials"
 #define MASTODON_STREAMING_USER_URL "/streaming/user"
 #define MASTODON_STREAMING_HASHTAG_URL "/streaming/hashtag"
+#define MASTODON_STREAMING_PUBLIC_URL "/streaming/public"
 #define MASTODON_HOME_TIMELINE_URL "/timelines/home"
+#define MASTODON_PUBLIC_TIMELINE_URL "/timelines/public"
 #define MASTODON_HASHTAG_TIMELINE_URL "/timelines/tag/%s"
 #define MASTODON_NOTIFICATIONS_URL "/notifications"
 
@@ -80,7 +82,12 @@ void mastodon_verify_credentials(struct im_connection *ic);
 void mastodon_following(struct im_connection *ic);
 void mastodon_initial_timeline(struct im_connection *ic);
 void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag);
-void mastodon_open_stream(struct im_connection *ic);
+void mastodon_local_timeline(struct im_connection *ic);
+void mastodon_federated_timeline(struct im_connection *ic);
+void mastodon_open_user_stream(struct im_connection *ic);
+void mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag);
+void mastodon_open_local_stream(struct im_connection *ic);
+void mastodon_open_federated_stream(struct im_connection *ic);
 void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean direct);
 void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type_t command, guint64 id);
 void mastodon_status_show_url(struct im_connection *ic, guint64 id);

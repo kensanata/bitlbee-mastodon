@@ -323,7 +323,7 @@ static void mastodon_connect(struct im_connection *ic)
 	}
 
 	mastodon_initial_timeline(ic);
-	mastodon_open_stream(ic);
+	mastodon_open_user_stream(ic);
 	ic->flags |= OPT_PONGS;
 }
 
@@ -664,18 +664,27 @@ static void mastodon_chat_msg(struct groupchat *c, char *message, int flags)
 }
 
 /**
- * Joining a group chat means joining hashtag.
+ * Joining a group chat means showing the appropriate timeline and start streaming it.
  */
 static struct groupchat *mastodon_chat_join(struct im_connection *ic,
                                            const char *room, const char *nick,
                                            const char *password, set_t **sets)
 {
-	char *hashtag = g_strdup(room);
-	struct groupchat *c = imcb_chat_new(ic, hashtag);
-	imcb_chat_topic(c, NULL, hashtag, 0);
+	char *topic = g_strdup(room);
+	struct groupchat *c = imcb_chat_new(ic, topic);
+	imcb_chat_topic(c, NULL, topic, 0);
 	imcb_chat_add_buddy(c, ic->acc->user);
-	mastodon_hashtag_timeline(ic, hashtag);
-	g_free(hashtag);
+	if (strcmp(topic, "local") == 0) {
+		mastodon_local_timeline(ic);
+		mastodon_open_local_stream(ic);
+	} else if (strcmp(topic, "federated") == 0) {
+		mastodon_federated_timeline(ic);
+		mastodon_open_federated_stream(ic);
+	} else {
+		mastodon_hashtag_timeline(ic, topic);
+		mastodon_open_hashtag_stream(ic, topic);
+	}
+	g_free(topic);
 	return c;
 }
 
@@ -1225,6 +1234,10 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			mastodon_account_statuses(ic, id);
 		} else if (*cmd[1] == '#') {
 			mastodon_hashtag_timeline(ic, cmd[1] + 1);
+		} else if (strcmp(cmd[1], "local") == 0) {
+			mastodon_local_timeline(ic);
+		} else if (strcmp(cmd[1], "federated") == 0) {
+			mastodon_federated_timeline(ic);
 		} else {
 			mastodon_unknown_account_statuses(ic, cmd[1]);
 		}

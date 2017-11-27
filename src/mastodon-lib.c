@@ -42,6 +42,13 @@
 #include <errno.h>
 
 typedef enum {
+	MT_HOME,
+	MT_LOCAL,
+	MT_FEDERATED,
+	MT_HASHTAG,
+} mastodon_timeline_type_t;
+
+typedef enum {
 	ML_STATUS,
 	ML_NOTIFICATION,
 	ML_USER,
@@ -77,7 +84,7 @@ struct mastodon_status {
 	guint64 reply_to;
 	GSList *tags;
 	GSList *mentions;
-	gboolean from_hashtag; /* This status was created by a hashtag subscription */
+	mastodon_timeline_type_t subscription; /* This status was created by a timeline subscription */
 };
 
 typedef enum {
@@ -714,6 +721,19 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 }
 
 /**
+ * Helper function for mastodon_status_show_chat.
+ */
+static void mastodon_status_show_chat1(gboolean me, struct groupchat *c, char *msg, struct mastodon_status *status)
+{
+	if (me) {
+		imcb_chat_log(c, "You: %s", msg ? msg : status->text);
+	} else {
+		imcb_chat_msg(c, status->account->acct,
+			      msg ? msg : status->text, 0, status->created_at);
+	}
+}
+
+/**
  * Function that is called to see the statuses in a group chat. Note
  * that the status might be tagged and that group chats dedicated to
  * particular hashtags might exist. In this case, put the status
@@ -730,39 +750,50 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 	}
 
 	char *msg = mastodon_msg_add_id(ic, status, "");
-
 	gboolean seen = FALSE;
-
-	// Add the status to any other existing group chats whose
-	// title matches one of the tags.
+	struct groupchat *c;
 	GSList *l;
-	for (l = status->tags; l; l = l->next) {
-		char *tag = l->data;
-		struct groupchat *c = bee_chat_by_title(ic->bee, ic, tag);
-		if (c) {
-			if (me) {
-				imcb_chat_log(c, "You: %s", msg ? msg : status->text);
-			} else {
-				imcb_chat_msg(c, status->account->acct,
-					      msg ? msg : status->text, 0, status->created_at);
+
+	switch (status->subscription) {
+
+	case MT_HASHTAG:
+		// Add the status to any other existing group chats whose title matches one of the tags.
+		for (l = status->tags; l; l = l->next) {
+			char *tag = l->data;
+			struct groupchat *c = bee_chat_by_title(ic->bee, ic, tag);
+			if (c) {
+				mastodon_status_show_chat1(me, c, msg, status);
+				seen = TRUE;
 			}
+		}
+		break;
+
+	case MT_LOCAL:
+		c = bee_chat_by_title(ic->bee, ic, "local");
+		if (c) {
+			mastodon_status_show_chat1(me, c, msg, status);
 			seen = TRUE;
 		}
+		break;
+
+	case MT_FEDERATED:
+		c = bee_chat_by_title(ic->bee, ic, "federated");
+		if (c) {
+			mastodon_status_show_chat1(me, c, msg, status);
+			seen = TRUE;
+		}
+		break;
+
+	case MT_HOME:
+		// use the default group chat, md->timeline_gc
+		c = mastodon_groupchat_init(ic);
+		mastodon_status_show_chat1(me, c, msg, status);
 	}
 
-	// If the status got here from the user timeline, use the
-	// default group chat, md->timeline_gc. Do this also if no
-	// appropriate channel was found. Create the default group
-	// chat if it does not exist.
-	if (!status->from_hashtag || !seen) {
-		struct groupchat *gc = mastodon_groupchat_init(ic);
-
-		if (me) {
-			imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
-		} else {
-			imcb_chat_msg(gc, status->account->acct,
-				      msg ? msg : status->text, 0, status->created_at);
-		}
+	// If the message was destined for a chat that has been removed, show it in the HOME timeline.
+	if (!seen) {
+		c = mastodon_groupchat_init(ic);
+		mastodon_status_show_chat1(me, c, msg, status);
 	}
 
 	g_free(msg);
@@ -918,11 +949,11 @@ static void mastodon_stream_handle_notification(struct im_connection *ic, json_v
 /**
  * Add exactly one status to the timeline.
  */
-static void mastodon_stream_handle_update(struct im_connection *ic, json_value *parsed, gboolean from_hashtag)
+static void mastodon_stream_handle_update(struct im_connection *ic, json_value *parsed, mastodon_timeline_type_t subscription)
 {
 	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
 	if (ms) {
-		ms->from_hashtag = from_hashtag;
+		ms->subscription = subscription;
 		mastodon_status_show(ic, ms);
 		ms_free(ms);
 	}
@@ -948,10 +979,10 @@ static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *
 }
 
 static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type,
-					 json_value *parsed, gboolean from_hashtag)
+					 json_value *parsed, mastodon_timeline_type_t subscription)
 {
 	if (evt_type == MASTODON_EVT_UPDATE) {
-		mastodon_stream_handle_update(ic, parsed, from_hashtag);
+		mastodon_stream_handle_update(ic, parsed, subscription);
 	} else if (evt_type == MASTODON_EVT_NOTIFICATION) {
 		mastodon_stream_handle_notification(ic, parsed);
 	} else if (evt_type == MASTODON_EVT_DELETE) {
@@ -961,7 +992,10 @@ static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_
 	}
 }
 
-static void mastodon_http_stream(struct http_request *req, gboolean from_hashtag)
+/**
+ * When streaming, we also want to tag the events appropriately. This only affects updates, for now.
+ */
+static void mastodon_http_stream(struct http_request *req, mastodon_timeline_type_t subscription)
 {
 	struct im_connection *ic = req->data;
 	struct mastodon_data *md = ic->proto_data;
@@ -1035,7 +1069,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server
 
 			json_value *parsed;
 			if ((parsed = json_parse(data->str, data->len))) {
-				mastodon_stream_handle_event(ic, evt_type, parsed, from_hashtag);
+				mastodon_stream_handle_event(ic, evt_type, parsed, subscription);
 				json_value_free(parsed);
 			}
 
@@ -1048,17 +1082,28 @@ end:
 
 	/* We might have multiple events */
 	if (req->body_size > 0) {
-		mastodon_http_stream(req, from_hashtag);
+		mastodon_http_stream(req, subscription);
 	}
 }
 
 static void mastodon_http_stream_user(struct http_request *req)
 {
-	mastodon_http_stream(req, FALSE);
+	mastodon_http_stream(req, MT_HOME);
 }
+
 static void mastodon_http_stream_hashtag(struct http_request *req)
 {
-	mastodon_http_stream(req, TRUE);
+	mastodon_http_stream(req, MT_HASHTAG);
+}
+
+static void mastodon_http_stream_local(struct http_request *req)
+{
+	mastodon_http_stream(req, MT_LOCAL);
+}
+
+static void mastodon_http_stream_federated(struct http_request *req)
+{
+	mastodon_http_stream(req, MT_FEDERATED);
 }
 
 void mastodon_stream(struct im_connection *ic, struct http_request *req)
@@ -1068,10 +1113,9 @@ void mastodon_stream(struct im_connection *ic, struct http_request *req)
 		req->flags |= HTTPC_STREAMING;
 		md->streams = g_slist_prepend(md->streams, req);
 	}
-
 }
 
-void mastodon_open_stream(struct im_connection *ic)
+void mastodon_open_user_stream(struct im_connection *ic)
 {
 	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_USER_URL,
 						 mastodon_http_stream_user, ic, HTTP_GET, NULL, 0);
@@ -1089,12 +1133,28 @@ void mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag)
 	mastodon_stream(ic, req);
 }
 
+void mastodon_open_local_stream(struct im_connection *ic)
+{
+	char *args[2] = {
+		"local", "1",
+	};
+
+	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_PUBLIC_URL,
+						 mastodon_http_stream_local, ic, HTTP_GET, args, 2);
+	mastodon_stream(ic, req);
+}
+
+void mastodon_open_federated_stream(struct im_connection *ic)
+{
+	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_PUBLIC_URL,
+						 mastodon_http_stream_federated, ic, HTTP_GET, NULL, 0);
+	mastodon_stream(ic, req);
+}
+
 /**
- * Handle a request containing nothing but statuses, e.g. a hashtag
- * timeline (in which case you should set from_hashtag to TRUE), or
- * from a user.
+ * Handle a request whose response contains nothing but statuses.
  */
-static void mastodon_http_timeline(struct http_request *req, int from_hashtag)
+static void mastodon_http_timeline(struct http_request *req, mastodon_timeline_type_t subscription)
 {
 	struct im_connection *ic = req->data;
 	if (!g_slist_find(mastodon_connections, ic)) {
@@ -1116,7 +1176,7 @@ static void mastodon_http_timeline(struct http_request *req, int from_hashtag)
 	for (i = parsed->u.array.length - 1; i >= 0 ; i--) {
 		json_value *node = parsed->u.array.values[i];
 		struct mastodon_status *ms = mastodon_xt_get_status(node);
-		ms->from_hashtag = from_hashtag;
+		ms->subscription = subscription;
 		mastodon_status_show(ic, ms);
 		ms_free(ms);
 	}
@@ -1126,7 +1186,7 @@ finish:
 
 static void mastodon_http_hashtag_timeline(struct http_request *req)
 {
-	mastodon_http_timeline(req, 1);
+	mastodon_http_timeline(req, MT_HASHTAG);
 }
 
 void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag)
@@ -1134,6 +1194,30 @@ void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag)
 	char *url = g_strdup_printf(MASTODON_HASHTAG_TIMELINE_URL, hashtag);
 	mastodon_http(ic, url, mastodon_http_hashtag_timeline, ic, HTTP_GET, NULL, 0);
 	g_free(url);
+}
+
+static void mastodon_http_local_timeline(struct http_request *req)
+{
+	mastodon_http_timeline(req, MT_LOCAL);
+}
+
+void mastodon_local_timeline(struct im_connection *ic)
+{
+	char *args[2] = {
+		"local", "1",
+	};
+
+	mastodon_http(ic, MASTODON_PUBLIC_TIMELINE_URL, mastodon_http_local_timeline, ic, HTTP_GET, args, 2);
+}
+
+static void mastodon_http_federated_timeline(struct http_request *req)
+{
+	mastodon_http_timeline(req, MT_FEDERATED);
+}
+
+void mastodon_federated_timeline(struct im_connection *ic)
+{
+	mastodon_http(ic, MASTODON_PUBLIC_TIMELINE_URL, mastodon_http_federated_timeline, ic, HTTP_GET, NULL, 0);
 }
 
 /**
@@ -2125,7 +2209,7 @@ void mastodon_context(struct im_connection *ic, guint64 id)
  */
 void mastodon_http_statuses(struct http_request *req)
 {
-	mastodon_http_timeline(req, 0);
+	mastodon_http_timeline(req, MT_HOME);
 }
 
 /**
