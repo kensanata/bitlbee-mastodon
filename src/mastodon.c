@@ -674,31 +674,45 @@ static struct groupchat *mastodon_chat_join(struct im_connection *ic,
 	struct groupchat *c = imcb_chat_new(ic, topic);
 	imcb_chat_topic(c, NULL, topic, 0);
 	imcb_chat_add_buddy(c, ic->acc->user);
+	struct http_request *req;
 	if (strcmp(topic, "local") == 0) {
 		mastodon_local_timeline(ic);
-		mastodon_open_local_stream(ic);
+		req = mastodon_open_local_stream(ic);
 	} else if (strcmp(topic, "federated") == 0) {
 		mastodon_federated_timeline(ic);
-		mastodon_open_federated_stream(ic);
+		req = mastodon_open_federated_stream(ic);
 	} else {
 		mastodon_hashtag_timeline(ic, topic);
-		mastodon_open_hashtag_stream(ic, topic);
+		req = mastodon_open_hashtag_stream(ic, topic);
 	}
 	g_free(topic);
+	c->data = req;
 	return c;
 }
 
 /**
- * Leaving a group chat means no longer subscribing to a hashtag if
- * we're in a hashtag channel. If the user leaves the main channel:
- * Fine. Rejoin him/her once new toots come in.
+ * If the user leaves the main channel: Fine. Rejoin him/her once new toots come in. But what if the user leaves a
+ * channel that is connected to a stream? In this case we need to find the appropriate stream and close it, too.
  */
 static void mastodon_chat_leave(struct groupchat *c)
 {
+	GSList *l;
 	struct mastodon_data *md = c->ic->proto_data;
+
 	if (c == md->timeline_gc) {
 		md->timeline_gc = NULL;
+	} else {
+		struct http_request *stream = c->data;
+		for (l = md->streams; l; l = l->next) {
+			struct http_request *req = l->data;
+			if (stream == req) {
+				md->streams = g_slist_remove(md->streams, req);
+				http_close(req);
+				break;
+			}
+		}
 	}
+
 	imcb_chat_free(c);
 }
 
