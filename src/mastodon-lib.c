@@ -1135,18 +1135,14 @@ void mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag)
 
 void mastodon_open_local_stream(struct im_connection *ic)
 {
-	char *args[2] = {
-		"local", "1",
-	};
-
-	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_PUBLIC_URL,
-						 mastodon_http_stream_local, ic, HTTP_GET, args, 2);
+	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_LOCAL_URL,
+						 mastodon_http_stream_local, ic, HTTP_GET, NULL, 0);
 	mastodon_stream(ic, req);
 }
 
 void mastodon_open_federated_stream(struct im_connection *ic)
 {
-	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_PUBLIC_URL,
+	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_FEDERATED_URL,
 						 mastodon_http_stream_federated, ic, HTTP_GET, NULL, 0);
 	mastodon_stream(ic, req);
 }
