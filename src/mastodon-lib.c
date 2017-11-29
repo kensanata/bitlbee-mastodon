@@ -788,12 +788,12 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 		// use the default group chat, md->timeline_gc
 		c = mastodon_groupchat_init(ic);
 		mastodon_status_show_chat1(me, c, msg, status);
+		seen = TRUE;
 	}
 
-	// If the message was destined for a chat that has been removed, show it in the HOME timeline.
+	// If the message was destined for a chat that has been removed, this is a bug.
 	if (!seen) {
-		c = mastodon_groupchat_init(ic);
-		mastodon_status_show_chat1(me, c, msg, status);
+		imcb_log(ic, "Warning: no groupchat for this message: %s", msg);
 	}
 
 	g_free(msg);
