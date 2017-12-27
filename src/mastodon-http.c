@@ -74,7 +74,7 @@ struct http_request *mastodon_http(struct im_connection *ic, char *url_string, h
 
 	char *url_arguments = g_strdup("");
 
-	char *request_method;
+	char *request_method = "GET";
 	switch (method) {
 	case HTTP_GET:
 		request_method = "GET";
