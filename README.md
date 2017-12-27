@@ -62,8 +62,18 @@ $ make
 $ sudo make install
 ```
 
-If your Bitlbee's plugindir is in a non-standard location you need to
+🔥 If your Bitlbee's plugindir is in a non-standard location you need to
 specify it: `./configure with --with-plugindir=/path/to/plugindir`
+
+🔥 If you're installing this plugin in a system where you didn't build
+your own Bitlbee but installed revision 3.5.1 (e.g. on a Debian system
+around the end of 2017), you will run into a problem: the plugin will
+get installed into `/usr/lib/bitlbee` (`plugindir`) but the
+documentation wants to install into `/usr/local/share/bitlbee` instead
+of `/usr/share/bitlbee` (`datadir`). As you can tell from
+`/usr/lib/pkgconfig/bitlbee.pc`, there is no `datadir` for you. In
+this situation, try `./configure --prefix=/usr` and build and install
+again.
 
 Debugging
 ---------
