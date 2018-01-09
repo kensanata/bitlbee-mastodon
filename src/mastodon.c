@@ -444,6 +444,7 @@ static void mastodon_logout(struct im_connection *ic)
 		g_free(md->url_path);
 		g_free(md->log);
 		g_free(md);
+		ic->proto_data = NULL;
 	}
 
 	mastodon_connections = g_slist_remove(mastodon_connections, ic);
