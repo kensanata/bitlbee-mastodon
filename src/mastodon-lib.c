@@ -1010,7 +1010,6 @@ static void mastodon_http_stream(struct http_request *req, mastodon_timeline_typ
 		md->streams = g_slist_remove (md->streams, req);
 		imcb_error(ic, "Stream closed (%s)", req->status_string);
 		imc_logout(ic, TRUE);
-		http_close(req);
 		return;
 	}
 
