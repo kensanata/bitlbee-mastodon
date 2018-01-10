@@ -38,6 +38,7 @@
 #include "mastodon-lib.h"
 #include "oauth2.h"
 #include "json_util.h"
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 
@@ -1225,10 +1226,16 @@ void mastodon_federated_timeline(struct im_connection *ic)
 void mastodon_flush_timeline(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
-	struct mastodon_list *home_timeline = md->home_timeline_obj;
-	struct mastodon_list *notifications = md->notifications_obj;
+	struct mastodon_list *home_timeline;
+	struct mastodon_list *notifications;
 	GSList *output = NULL;
 	GSList *l;
+
+	if (md == NULL) {
+		return;
+	}
+	home_timeline = md->home_timeline_obj;
+	notifications = md->notifications_obj;
 
 	imcb_connected(ic);
 
@@ -1281,8 +1288,6 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 		return;
 	}
 
-	struct mastodon_data *md = ic->proto_data;
-
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		goto end;
@@ -1293,9 +1298,13 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 	mastodon_xt_get_status_list(ic, parsed, ml);
 	json_value_free(parsed);
 
-	md->home_timeline_obj = ml;
+	if (ic->proto_data) {
+		((struct mastodon_data *)ic->proto_data)->home_timeline_obj = ml;
+	}
 end:
-	md->flags |= MASTODON_GOT_TIMELINE;
+	if (ic->proto_data) {
+		((struct mastodon_data *)ic->proto_data)->flags |= MASTODON_GOT_TIMELINE;
+	}
 
 	mastodon_flush_timeline(ic);
 }

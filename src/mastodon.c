@@ -436,13 +436,13 @@ static void mastodon_logout(struct im_connection *ic)
 			http_close(req);
 		}
 
-		g_slist_free(md->streams);
-		os_free(md->oauth2_service);
-		g_free(md->user);
-		g_free(md->prefix);
-		g_free(md->url_host);
-		g_free(md->url_path);
-		g_free(md->log);
+		g_slist_free(md->streams); md->streams = NULL;
+		os_free(md->oauth2_service); md->oauth2_service = NULL;
+		g_free(md->user); md->user = NULL;
+		g_free(md->prefix); md->prefix = NULL;
+		g_free(md->url_host); md->url_host = NULL;
+		g_free(md->url_path); md->url_path = NULL;
+		g_free(md->log); md->log = NULL;
 		g_free(md);
 		ic->proto_data = NULL;
 	}
