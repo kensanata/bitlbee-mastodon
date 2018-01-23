@@ -38,6 +38,7 @@
 #include "mastodon-lib.h"
 #include "oauth2.h"
 #include "json_util.h"
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 
@@ -1010,7 +1011,6 @@ static void mastodon_http_stream(struct http_request *req, mastodon_timeline_typ
 		md->streams = g_slist_remove (md->streams, req);
 		imcb_error(ic, "Stream closed (%s)", req->status_string);
 		imc_logout(ic, TRUE);
-		http_close(req);
 		return;
 	}
 
@@ -1162,6 +1162,8 @@ static void mastodon_http_timeline(struct http_request *req, mastodon_timeline_t
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -1226,10 +1228,16 @@ void mastodon_federated_timeline(struct im_connection *ic)
 void mastodon_flush_timeline(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
-	struct mastodon_list *home_timeline = md->home_timeline_obj;
-	struct mastodon_list *notifications = md->notifications_obj;
+	struct mastodon_list *home_timeline;
+	struct mastodon_list *notifications;
 	GSList *output = NULL;
 	GSList *l;
+
+	if (md == NULL) {
+		return;
+	}
+	home_timeline = md->home_timeline_obj;
+	notifications = md->notifications_obj;
 
 	imcb_connected(ic);
 
@@ -1282,10 +1290,10 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 		return;
 	}
 
-	struct mastodon_data *md = ic->proto_data;
-
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		goto end;
 	}
 
@@ -1294,11 +1302,17 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 	mastodon_xt_get_status_list(ic, parsed, ml);
 	json_value_free(parsed);
 
-	md->home_timeline_obj = ml;
+	if (ic->proto_data) {
+		((struct mastodon_data *)ic->proto_data)->home_timeline_obj = ml;
+	}
 end:
-	md->flags |= MASTODON_GOT_TIMELINE;
+	if (ic) {
+		if (ic->proto_data) {
+			((struct mastodon_data *)ic->proto_data)->flags |= MASTODON_GOT_TIMELINE;
+		}
 
-	mastodon_flush_timeline(ic);
+		mastodon_flush_timeline(ic);
+	}
 }
 
 /**
@@ -1316,6 +1330,8 @@ static void mastodon_http_get_notifications(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		goto end;
 	}
 
@@ -1329,7 +1345,9 @@ static void mastodon_http_get_notifications(struct http_request *req)
 end:
 	md->flags |= MASTODON_GOT_NOTIFICATIONS;
 
-	mastodon_flush_timeline(ic);
+	if (ic) {
+		mastodon_flush_timeline(ic);
+	}
 }
 
 static void mastodon_get_home_timeline(struct im_connection *ic)
@@ -1395,6 +1413,8 @@ static void mastodon_http_callback(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -1602,6 +1622,8 @@ static void mastodon_http_log_all(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -1727,6 +1749,8 @@ void mastodon_http_status_delete(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -1812,6 +1836,8 @@ void mastodon_http_report(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		goto finally;
 	}
 
@@ -1937,6 +1963,8 @@ static void mastodon_http_search_relationship(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -1990,6 +2018,8 @@ static void mastodon_http_status_show_url(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -2026,6 +2056,8 @@ static void mastodon_http_status_show_mentions(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -2119,6 +2151,8 @@ void mastodon_http_context(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		goto end;
 	}
 
@@ -2145,7 +2179,9 @@ finished:
 	json_value_free(parsed);
 end:
 	md->flags |= MASTODON_GOT_CONTEXT;
-	mastodon_flush_context(ic);
+	if (ic) {
+		mastodon_flush_context(ic);
+	}
 }
 
 /**
@@ -2163,6 +2199,8 @@ void mastodon_http_context_status(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		goto end;
 	}
 
@@ -2171,7 +2209,9 @@ void mastodon_http_context_status(struct http_request *req)
 	json_value_free(parsed);
 end:
 	md->flags |= MASTODON_GOT_STATUS;
-	mastodon_flush_context(ic);
+	if (ic) {
+		mastodon_flush_context(ic);
+	}
 }
 
 /**
@@ -2235,6 +2275,8 @@ void mastodon_http_unknown_account_statuses(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -2278,6 +2320,8 @@ static void mastodon_http_follow3(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -2306,6 +2350,8 @@ static void mastodon_http_follow2(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -2361,6 +2407,8 @@ static void mastodon_http_follow1(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
@@ -2405,6 +2453,8 @@ static void mastodon_http_following(struct http_request *req)
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
 		return;
 	}
 
