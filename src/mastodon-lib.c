@@ -1343,9 +1343,9 @@ static void mastodon_http_get_notifications(struct http_request *req)
 	md->notifications_obj = ml;
 
 end:
-	md->flags |= MASTODON_GOT_NOTIFICATIONS;
 
 	if (ic) {
+		md->flags |= MASTODON_GOT_NOTIFICATIONS;
 		mastodon_flush_timeline(ic);
 	}
 }
@@ -2178,8 +2178,8 @@ void mastodon_http_context(struct http_request *req)
 finished:
 	json_value_free(parsed);
 end:
-	md->flags |= MASTODON_GOT_CONTEXT;
 	if (ic) {
+		md->flags |= MASTODON_GOT_CONTEXT;
 		mastodon_flush_context(ic);
 	}
 }
@@ -2208,8 +2208,8 @@ void mastodon_http_context_status(struct http_request *req)
 
 	json_value_free(parsed);
 end:
-	md->flags |= MASTODON_GOT_STATUS;
 	if (ic) {
+		md->flags |= MASTODON_GOT_STATUS;
 		mastodon_flush_context(ic);
 	}
 }
