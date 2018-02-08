@@ -25,6 +25,7 @@ mastodon_la_CFLAGS  = \
 mastodon_la_LDFLAGS = \
 	-module \
 	-avoid-version \
+	$(BITLBEE_LIBS) \
 	$(GLIB_LIBS)
 
 mastodon_la_SOURCES = \
