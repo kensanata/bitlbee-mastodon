@@ -809,10 +809,10 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 	char from[MAX_STRING] = "";
 	char *prefix = NULL, *text = NULL;
 	gboolean me = g_strcasecmp(md->user, status->account->acct) == 0;
+	char *name = set_getstr(&ic->acc->set, "name");
 
 	if (md->flags & MASTODON_MODE_ONE) {
-		g_snprintf(from, sizeof(from) - 1, "%s_%s", md->prefix, ic->acc->user);
-		from[MAX_STRING - 1] = '\0';
+		g_strlcpy(from, name, sizeof(from));
 	}
 
 	if (md->flags & MASTODON_MODE_ONE) {

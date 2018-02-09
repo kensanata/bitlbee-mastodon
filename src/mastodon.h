@@ -120,7 +120,7 @@ struct mastodon_data {
 	char *url_host;
 	char *url_path;
 
-	char *prefix; /* Used to generate contact + channel name. */
+	char *name; /* Used to generate contact + channel name. */
 
 	/* set show_ids */
 	struct mastodon_log_data *log;

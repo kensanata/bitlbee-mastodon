@@ -89,7 +89,6 @@ GSList *mastodon_connections = NULL;
 
 struct groupchat *mastodon_groupchat_init(struct im_connection *ic)
 {
-	char *name_hint;
 	struct groupchat *gc;
 	struct mastodon_data *md = ic->proto_data;
 	GSList *l;
@@ -99,10 +98,7 @@ struct groupchat *mastodon_groupchat_init(struct im_connection *ic)
 	}
 
 	md->timeline_gc = gc = imcb_chat_new(ic, "mastodon/timeline");
-
-	name_hint = g_strdup_printf("%s_%s", md->prefix, ic->acc->user);
-	imcb_chat_name_hint(gc, name_hint);
-	g_free(name_hint);
+	imcb_chat_name_hint(gc, md->name);
 
 	for (l = ic->bee->users; l; l = l->next) {
 		bee_user_t *bu = l->data;
@@ -246,6 +242,9 @@ static void mastodon_init(account_t * acc)
 	s = set_add(&acc->set, "mode", "chat", set_eval_mode, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
+	s = set_add(&acc->set, "name", "", NULL, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
 	s = set_add(&acc->set, "show_ids", "true", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
@@ -264,6 +263,21 @@ static void mastodon_init(account_t * acc)
 
 	mastodon_help_init();
 }
+
+/**
+ * Set the name of the Mastodon channel, either based on a preference, or based on hostname and account name.
+ */
+static void mastodon_set_name(struct im_connection *ic)
+{
+	struct mastodon_data *md = ic->proto_data;
+	char *name = set_getstr(&ic->acc->set, "name");
+	if (name[0]) {
+		md->name = g_strdup(name);
+	} else {
+		md->name = g_strdup_printf("%s_%s", md->url_host, ic->acc->user);
+	}
+}
+
 
 /**
  * Connect to Mastodon server, using the data we saved in the account.
@@ -290,12 +304,9 @@ static void mastodon_connect(struct im_connection *ic)
 		md->url_path = g_strdup(url.file);
 	}
 
-	md->prefix = g_strdup(url.host);
-
-	char *name = g_strdup_printf("%s_%s", md->prefix, ic->acc->user);
-	imcb_add_buddy(ic, name, NULL);
-	imcb_buddy_status(ic, name, OPT_LOGGED_IN, NULL, NULL);
-	g_free(name);
+	mastodon_set_name(ic);
+	imcb_add_buddy(ic, md->name, NULL);
+	imcb_buddy_status(ic, md->name, OPT_LOGGED_IN, NULL, NULL);
 
 	md->log = g_new0(struct mastodon_log_data, MASTODON_LOG_LENGTH);
 	md->log_id = -1;
@@ -372,12 +383,12 @@ static void mastodon_login(account_t * acc)
 	md->url_ssl = 1;
 	md->url_port = url.port;
 	md->url_host = g_strdup(url.host);
-	md->prefix = g_strdup(url.host);
 	if (strcmp(url.file, "/") != 0) {
 		md->url_path = g_strdup(url.file);
 	} else {
 		md->url_path = g_strdup("");
 	}
+ 	mastodon_set_name(ic);
 
 	GSList *p_in = NULL;
 	const char *tok;
@@ -439,7 +450,7 @@ static void mastodon_logout(struct im_connection *ic)
 		g_slist_free(md->streams); md->streams = NULL;
 		os_free(md->oauth2_service); md->oauth2_service = NULL;
 		g_free(md->user); md->user = NULL;
-		g_free(md->prefix); md->prefix = NULL;
+		g_free(md->name); md->name = NULL;
 		g_free(md->url_host); md->url_host = NULL;
 		g_free(md->url_path); md->url_path = NULL;
 		g_free(md->log); md->log = NULL;
@@ -617,7 +628,6 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message, int away)
 {
 	struct mastodon_data *md = ic->proto_data;
-	int plen = strlen(md->prefix);
 
 	if (g_strcasecmp(who, MASTODON_OAUTH_HANDLE) == 0 &&
 	    !(md->flags & OPT_LOGGED_IN)) {
@@ -631,8 +641,7 @@ static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message
 		}
 	}
 
-	if (g_strncasecmp(who, md->prefix, plen) == 0 && who[plen] == '_' &&
-	    g_strcasecmp(who + plen + 1, ic->acc->user) == 0) {
+	if (g_strcasecmp(who, md->name) == 0) {
 		mastodon_handle_command(ic, message, MASTODON_NEW);
 	} else {
 		mastodon_post_message(ic, message, 0, who, MASTODON_DIRECT);
@@ -646,11 +655,9 @@ static void mastodon_get_info(struct im_connection *ic, char *who)
 {
 	struct mastodon_data *md = ic->proto_data;
 	struct irc_channel *ch = md->timeline_gc->ui_data;
-	int plen = strlen(md->prefix);
 
 	imcb_log(ic, "Sending output to %s", ch->name);
-	if (g_strncasecmp(who, md->prefix, plen) == 0 && who[plen] == '_' &&
-	    g_strcasecmp(who + plen + 1, ic->acc->user) == 0) {
+	if (g_strcasecmp(who, md->name) == 0) {
 		mastodon_instance(ic);
 	} else {
 		mastodon_user(ic, who);
