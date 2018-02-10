@@ -23,7 +23,7 @@ Mastodon is a free, open-source social network server. A decentralized solution 
  help mset - Settings affecting Mastodon accounts
 %
 ?mregister
-You need to register your Mastodon account on an instance. See https://instances.social/ if you need help picking an instance. It's a bit like picking a mail server and signing up.
+You need to register your Mastodon account on an instance. See https://instances.social/ if you need help picking an instance. It's a bit like picking a mail server and signing up. Sadly, there is currently no way to do this from IRC. Your need to use a web browser to do it. Once you have the account, see help account add mastodon for setting up your account.
 %
 ?mset
 These settings will affect Mastodon accounts:
@@ -35,6 +35,19 @@ These settings will affect Mastodon accounts:
  set mode - create a separate channel for contacts/messages
  set show_ids - display the "id" in front of every message
  set target_url_length - an URL counts as 23 characters
+ set name - the name for your account channel
+%
+?set name
+Type: string
+Scope: account
+Default: empty
+
+Without a name set, Mastodon accounts will use host URL and acccount name to create a channel name. This results in a long channel name and if you prefer a shorter channel name, use this setting (when the account is offline) to change it.
+
+<kensanata> account mastodon offline
+<kensanata> account mastodon set name masto
+<kensanata> account mastodon online
+<kensanata> save
 %
 ?account add mastodon
 Syntax: account add mastodon <handle>
@@ -45,7 +58,7 @@ To send toots yourself, just write in the groupchat channel.
 
 Since Mastodon requires OAuth authentication, you should not enter your Mastodon password into BitlBee. The first time you log in, BitlBee will start OAuth authentication. (See help set oauth.)
 
-In order to connect to the correct instances, you must most probably change the base_url setting. See mconnect for an example.
+In order to connect to the correct instances, you must most probably change the base_url setting. See help mconnect for an example.
 %
 ?mconnect
 In this section, we'll sign in as @kensanata@mastodon.weaponvsac.space. This section assumes an existing account on an instance! Replace username and Mastodon server when trying it.
@@ -78,7 +91,7 @@ Once you do that, your login should complete in the &bitlbee channel:
 <root> mastodon2 - Logging in: Getting home timeline
 <root> mastodon2 - Logging in: Logged in
 
-You should now have a channel called #mastodon.weaponsvsac.space@localhost where all the status updates and notifications get shown. We'll call this your account channel.
+You should now have a channel called #mastodon.weaponsvsac.space@localhost where all the status updates and notifications get shown. We'll call this your account channel. See help set name to change it's name.
 
 Mastodon gives BitlBee a permanent authentication token, which will be saved in your configuration.
 
