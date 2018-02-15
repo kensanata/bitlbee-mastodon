@@ -138,7 +138,7 @@ This only works if that nick's last message was sent within the last 3h. For mor
 
 You can also reply to an earlier message by referring to its id using the reply <id> <message> command. The handle of the original author you are replying to will be prepended automatically. It is up to you to mention any of the other people mentioned in the original.
 
-  Use whois <nick> to show a nick's handle and full name.
+Use whois <id|nick> to show handle and full name by a nick, or of all the nicks mentioned in a status.
 
 If you set the commands setting to strict, using the reply command is mandatory.
 %
@@ -188,7 +188,7 @@ Use info relation <nick|account> to get debug information about the relation t
 Use info <id|nick> to get debug information about a status or the last status by a nick.
 %
 ?msearch
-Mastodon allows you to search for three kinds of things:
+Mastodon allows you to search for three kinds of things: accounts, hashtags, and the URLs of a status.
 
 Use search <what> to get debug information about the things found by a search.
 %
