@@ -385,7 +385,7 @@ static void mastodon_login(account_t * acc)
 		return;
 	}
 	if (strcmp(url.file, "/api/v1") != 0) {
-		imcb_error(ic, "API base URL should probably end in /api/v1: %s", set_getstr(&ic->acc->set, "base_url"));
+		imcb_log(ic, "API base URL should probably end in /api/v1 instead of %s", url.file);
 	}
 	md->url_ssl = 1;
 	md->url_port = url.port;
