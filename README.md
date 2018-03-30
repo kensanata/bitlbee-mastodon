@@ -1,12 +1,12 @@
 Mastodon plugin for Bitlbee
 ---------------------------
 
-This plugin allows [Bitblee](https://www.bitlbee.org/) to communicate
+This plugin allows [Bitlbee](https://www.bitlbee.org/) to communicate
 with [Mastodon](https://joinmastodon.org/) instances. Mastodon is a
 free, open-source, decentralized microblogging network. Bitlbee is an
 IRC server connecting to various other text messaging services. You
 run Bitlbee and connect to it using an IRC client, then configure
-Bitblee to connect to other services, such as a Mastodon instance
+Bitlbee to connect to other services, such as a Mastodon instance
 where you already have an account. The benefit is that you can now use
 [any IRC client](https://en.wikipedia.org/wiki/Comparison_of_Internet_Relay_Chat_clients)
 you want to connect to Mastodon.
