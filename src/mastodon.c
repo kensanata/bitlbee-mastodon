@@ -374,11 +374,18 @@ static void mastodon_login(account_t * acc)
 	ic->proto_data = md;
 	md->user = g_strdup(acc->user);
 
-	if (!url_set(&url, set_getstr(&ic->acc->set, "base_url")) ||
-	    (url.proto != PROTO_HTTPS)) {
-		imcb_error(ic, "Incorrect API base URL: %s", set_getstr(&ic->acc->set, "base_url"));
+	if (!url_set(&url, set_getstr(&ic->acc->set, "base_url"))) {
+		imcb_error(ic, "Cannot parse API base URL: %s", set_getstr(&ic->acc->set, "base_url"));
 		imc_logout(ic, FALSE);
 		return;
+	}
+	if (url.proto != PROTO_HTTPS) {
+		imcb_error(ic, "API base URL must use HTTPS: %s", set_getstr(&ic->acc->set, "base_url"));
+		imc_logout(ic, FALSE);
+		return;
+	}
+	if (strcmp(url.file, "/api/v1") != 0) {
+		imcb_error(ic, "API base URL should probably end in /api/v1: %s", set_getstr(&ic->acc->set, "base_url"));
 	}
 	md->url_ssl = 1;
 	md->url_port = url.port;
