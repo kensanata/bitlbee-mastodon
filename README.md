@@ -22,6 +22,9 @@ Please refer to the Bitlbee help system:
 > help mastodon
 ```
 
+Alternatively, a snapshot of the entries added to the help system by
+this plugin are available on the [help page](doc/HELP.md).
+
 Build dependencies
 ------------------
 
