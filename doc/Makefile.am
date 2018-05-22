@@ -26,3 +26,15 @@ install-data-local:
 		echo "Detected dir $(datadir) is not bitlbee's data dir"; \
 		echo "Skipping help install"; \
 	fi
+
+HELP.md: mastodon-help.txt
+	sed \
+	-e '1i# Bitlbee Mastodon' \
+	-e '1d' \
+	-e 's/^%$$//g' \
+	-e 's/^\?/## /g' \
+	-e 's//*/g' \
+	-e 's/^ \*/* */g' \
+	-e 's/\*\(help \(m[a-z]*2*\)\)\*/[\1](\2)/g' \
+	-e 's/^\(\*<.*\)/\1  /g' \
+	< $^ > $@
