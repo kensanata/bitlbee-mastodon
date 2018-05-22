@@ -33,6 +33,7 @@ HELP.md: mastodon-help.txt
 	-e '1d' \
 	-e 's/^%$$//g' \
 	-e 's/^\?m/## /g' \
+	-e 's/^\?/## /g' \
 	-e 's//*/g' \
 	-e 's/^ \*/* */g' \
 	-e 's/\*help m\([a-z]*2*\)\*/[\1](#\1)/g' \

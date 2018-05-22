@@ -39,7 +39,7 @@ These settings will affect Mastodon accounts:
 * *set target_url_length* - an URL counts as 23 characters
 * *set name* - the name for your account channel
 
-?set name
+## set name
 *Type:* string  
 *Scope:* account  
 *Default:* empty  
@@ -51,7 +51,7 @@ Without a name set, Mastodon accounts will use host URL and acccount name to cre
 *<kensanata>* account mastodon online  
 *<kensanata>* save  
 
-?account add mastodon
+## account add mastodon
 *Syntax:* account add mastodon <handle>  
 
 By default all the Mastodon accounts you are following will appear in a new channel named after your Mastodon instance. You can change this behaviour using the *mode* setting (see *help set mode*).
