@@ -1,4 +1,6 @@
 # Bitlbee Mastodon
+This document was generated from the help text for the plugin.
+
 Mastodon is a free, open-source social network server. A decentralized solution to commercial platforms, it avoids the risks of a single company monopolizing your communication. Anyone can run Mastodon and participate in the social network seamlessly.
 
 * [help mregister](#mregister) - Registering an account
@@ -38,9 +40,9 @@ These settings will affect Mastodon accounts:
 * *set name* - the name for your account channel
 
 ## set name
-*Type:* string
-*Scope:* account
-*Default:* empty
+*Type:* string  
+*Scope:* account  
+*Default:* empty  
 
 Without a name set, Mastodon accounts will use host URL and acccount name to create a channel name. This results in a long channel name and if you prefer a shorter channel name, use this setting (when the account is offline) to change it.
 
@@ -50,7 +52,7 @@ Without a name set, Mastodon accounts will use host URL and acccount name to cre
 *<kensanata>* save  
 
 ## account add mastodon
-*Syntax:* account add mastodon <handle>
+*Syntax:* account add mastodon <handle>  
 
 By default all the Mastodon accounts you are following will appear in a new channel named after your Mastodon instance. You can change this behaviour using the *mode* setting (see *help set mode*).
 
