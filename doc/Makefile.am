@@ -32,9 +32,9 @@ HELP.md: mastodon-help.txt
 	-e '1i# Bitlbee Mastodon\nThis document was generated from the help text for the plugin.\n' \
 	-e '1d' \
 	-e 's/^%$$//g' \
-	-e 's/^\?/## /g' \
+	-e 's/^\?m/## /g' \
 	-e 's//*/g' \
 	-e 's/^ \*/* */g' \
-	-e 's/\*\(help \(m[a-z]*2*\)\)\*/[\1](#\2)/g' \
+	-e 's/\*help m\([a-z]*2*\)\*/[\1](#\1)/g' \
 	-e 's/^\(\*[^ ].*\)/\1  /g' \
 	< $^ > $@
