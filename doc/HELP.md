@@ -1,26 +1,26 @@
 # Bitlbee Mastodon
 Mastodon is a free, open-source social network server. A decentralized solution to commercial platforms, it avoids the risks of a single company monopolizing your communication. Anyone can run Mastodon and participate in the social network seamlessly.
 
-* [help mregister](mregister) - Registering an account
-* [help mconnect](mconnect) - Connecting to an instance
-* [help mread](mread) - Reading your timeline
-* [help mpost](mpost) - Posting a new status
-* [help mundo](mundo) - Undo and redo
-* [help mcontext](mcontext) - Showing a status in its context
-* [help mreply](mreply) - Replying to a status
-* [help mdelete](mdelete) - Deleting a status
-* [help mfavourite](mfavourite) - Favouring a status
-* [help mfollow](mfollow) - Following an account
-* [help mblock](mblock) - Blocking an account
-* [help mmute](mmute) - Muting an account
-* [help mboost](mboost) - Boosting a status
-* [help mmore](mmore) - Getting more information about things
-* [help msearch](msearch) - Searching for accounts and hashtags
-* [help mspam](mspam) - Reporting a status
-* [help mcontrol](mcontrol) - Commands in the control channel
-* [help mhashtag](mhashtag) - Following a hashtag
-* [help mpublic](mpublic) - Following the local or federated timeline
-* [help mset](mset) - Settings affecting Mastodon accounts
+* [help mregister](#mregister) - Registering an account
+* [help mconnect](#mconnect) - Connecting to an instance
+* [help mread](#mread) - Reading your timeline
+* [help mpost](#mpost) - Posting a new status
+* [help mundo](#mundo) - Undo and redo
+* [help mcontext](#mcontext) - Showing a status in its context
+* [help mreply](#mreply) - Replying to a status
+* [help mdelete](#mdelete) - Deleting a status
+* [help mfavourite](#mfavourite) - Favouring a status
+* [help mfollow](#mfollow) - Following an account
+* [help mblock](#mblock) - Blocking an account
+* [help mmute](#mmute) - Muting an account
+* [help mboost](#mboost) - Boosting a status
+* [help mmore](#mmore) - Getting more information about things
+* [help msearch](#msearch) - Searching for accounts and hashtags
+* [help mspam](#mspam) - Reporting a status
+* [help mcontrol](#mcontrol) - Commands in the control channel
+* [help mhashtag](#mhashtag) - Following a hashtag
+* [help mpublic](#mpublic) - Following the local or federated timeline
+* [help mset](#mset) - Settings affecting Mastodon accounts
 
 ## mregister
 You need to register your Mastodon account on an *instance*. See https://instances.social/ if you need help picking an instance. It's a bit like picking a mail server and signing up. Sadly, there is currently no way to do this from IRC. Your need to use a web browser to do it. Once you have the account, see *help account add mastodon* for setting up your account.
@@ -58,7 +58,7 @@ To send toots yourself, just write in the groupchat channel.
 
 Since Mastodon requires OAuth authentication, you should not enter your Mastodon password into BitlBee. The first time you log in, BitlBee will start OAuth authentication. (See *help set oauth*.)
 
-In order to connect to the correct instances, you must most probably change the *base_url* setting. See [help mconnect](mconnect) for an example.
+In order to connect to the correct instances, you must most probably change the *base_url* setting. See [help mconnect](#mconnect) for an example.
 
 ## mconnect
 In this section, we'll sign in as *@kensanata@mastodon.weaponvsac.space*. This section assumes an existing account on an instance! Replace username and Mastodon server when trying it.
@@ -74,7 +74,7 @@ In your *&bitlbee* channel, add a new account, change it's *base_url* to point a
 *<root>* mastodon - Logging in: Parsing application registration response  
 *<root>* mastodon - Logging in: Starting OAuth authentication  
 
-At this point, you'll get contacted by the user *mastodon_oauth* with a big URL that you need to visit using a browser. See [help mconnect2](mconnect2) for the OAuth authentication.
+At this point, you'll get contacted by the user *mastodon_oauth* with a big URL that you need to visit using a browser. See [help mconnect2](#mconnect2) for the OAuth authentication.
 
 ## mconnect2
 Visit the URL the *mastodon_oauth* user gave you and authenticate the client. You'll get back another very long string. Copy and paste this string:
