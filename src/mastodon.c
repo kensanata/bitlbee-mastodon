@@ -221,6 +221,16 @@ static char *set_eval_mode(set_t * set, char *value)
 	}
 }
 
+static char *set_eval_hide_sensitive(set_t * set, char *value)
+{
+	if (g_strcasecmp(value, "rot13") == 0 ||
+	    g_strcasecmp(value, "advanced_rot13") == 0) {
+		return value;
+	} else {
+		return set_eval_bool(set, value);
+	}
+}
+
 static void mastodon_init(account_t * acc)
 {
 	set_t *s;
@@ -249,7 +259,7 @@ static void mastodon_init(account_t * acc)
 
 	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
 
-	s = set_add(&acc->set, "hide_sensitive", "false", set_eval_bool, acc);
+	s = set_add(&acc->set, "hide_sensitive", "false", set_eval_hide_sensitive, acc);
 
 	s = set_add(&acc->set, "sensitive_flag", "*NSFW* ", NULL, acc);
 

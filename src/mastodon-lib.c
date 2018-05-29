@@ -31,6 +31,7 @@
 
 #include "mastodon-http.h"
 #include "mastodon.h"
+#include "rot13.h"
 #include "bitlbee.h"
 #include "url.h"
 #include "misc.h"
@@ -413,6 +414,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 	const json_value *url_value = NULL;
 	GSList *media = NULL;
 	gboolean nsfw = FALSE;
+	gboolean use_cw1 = g_strcasecmp(set_getstr(&ic->acc->set, "hide_sensitive"), "advanced_rot13") == 0;
 
 	if (node->type != json_object) {
 		return FALSE;
@@ -527,7 +529,10 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		GString *s = g_string_new(NULL);
 
 		if (spoiler_value) {
-			g_string_append_printf(s, "[CW: %s] ", spoiler_value->u.string.ptr);
+			g_string_append_printf(s, "[CW: %s]", spoiler_value->u.string.ptr);
+			if (nsfw || !use_cw1) {
+				g_string_append(s, " ");
+			}
 		}
 
 		if (nsfw) {
@@ -536,24 +541,46 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		}
 
 		if (text_value) {
-			if (nsfw && set_getbool(&ic->acc->set, "hide_sensitive")) {
-				g_string_append(s, "[hidden");
-				if (ms->url) {
-					g_string_append(s, ": ");
-					g_string_append(s, ms->url);
+			char *text = g_strdup(text_value->u.string.ptr);
+			char *fmt = "%s";
+			if (spoiler_value && use_cw1) {
+				char *wrapped = NULL;
+				char **cwed = NULL;
+				rot13(text);
+				// "\001CW1 \001" = 6 bytes, there's also a nick length issue we take into account.
+				// there's also irc_format_timestamp which can add like 28 bytes or something.
+				wrapped = word_wrap(text, IRC_WORD_WRAP - 6 - MAX_NICK_LENGTH - 28);
+				g_free(text);
+				text = wrapped;
+				cwed = g_strsplit(text, "\n", -1); // easier than a regex
+				g_free(text);
+				text = g_strjoinv("\001\n\001CW1 ", cwed); // easier than a replace
+				g_strfreev(cwed);
+				fmt = "\n\001CW1 %s\001"; // add a newline at the start because that makes word wrap a lot easier (and because it matches the web UI better)
+			} else if (spoiler_value && g_strcasecmp(set_getstr(&ic->acc->set, "hide_sensitive"), "rot13") == 0) {
+				rot13(text);
+			} else if (spoiler_value && set_getbool(&ic->acc->set, "hide_sensitive")) {
+				g_free(text);
+				text = g_strdup(ms->url);
+				if (text) {
+					fmt = "[hidden: %s]";
+				} else {
+					fmt = "[hidden]";
 				}
-				g_string_append(s, "]");
-			} else {
-				g_string_append(s, text_value->u.string.ptr);
 			}
+			g_string_append_printf(s, fmt, text);
+			g_free(text);
 		}
 
 		GSList *l = NULL;
 		for (l = media; l; l = l->next) {
+			// TODO maybe support hiding media when it's marked NSFW.
+			// (note that only media is hidden when it's marked NSFW. the text still shows.)
+			// (note that we already don't show media, since this is all text, but IRC clients might.)
 
 			char *url = l->data;
 
-			if (strstr(s->str, url)) {
+			if ((text_value && strstr(text_value->u.string.ptr, url)) || strstr(s->str, url)) {
 				// skip URLs already in the text
 				continue;
 			}
