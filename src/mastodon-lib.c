@@ -536,7 +536,16 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		}
 
 		if (text_value) {
-			g_string_append(s, text_value->u.string.ptr);
+			if (nsfw && set_getbool(&ic->acc->set, "hide_sensitive")) {
+				g_string_append(s, "[hidden");
+				if (ms->url) {
+					g_string_append(s, ": ");
+					g_string_append(s, ms->url);
+				}
+				g_string_append(s, "]");
+			} else {
+				g_string_append(s, text_value->u.string.ptr);
+			}
 		}
 
 		GSList *l = NULL;
