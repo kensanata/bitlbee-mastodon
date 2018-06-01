@@ -36,6 +36,8 @@ These settings will affect Mastodon accounts:
  set show_ids - display the "id" in front of every message
  set target_url_length - an URL counts as 23 characters
  set name - the name for your account channel
+ set hide_sensitive - hide content marked as sensitive by the author
+ set sensitive_flag - text to flag sensitive content with; default "*NSFW* "
 %
 ?set name
 Type: string
