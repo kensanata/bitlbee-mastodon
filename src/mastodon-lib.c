@@ -533,7 +533,6 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		if (nsfw) {
 			char *sensitive_flag = set_getstr(&ic->acc->set, "sensitive_flag");
 			g_string_append(s, sensitive_flag);
-			g_string_append(s, " ");
 		}
 
 		if (text_value) {
