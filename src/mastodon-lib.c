@@ -1679,24 +1679,36 @@ static void mastodon_http_log_all(struct http_request *req)
  * Function to POST a new status to mastodon. We don't support the
  * visibility levels "private" and "unlisted".
  */
-void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean direct)
+void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean direct, char *spoiler_text)
 {
-	char *args[6] = {
+	char *args[8] = {
 		"status", msg,
 		"visibility", direct ? "direct" : "public",
+		"spoiler_text", spoiler_text,
 		"in_reply_to_id", g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
+	int count = 8;
 
 	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
 	mc->ic = ic;
 
 	mc->command = MC_POST;
 
+	if (!in_reply_to) {
+		count -= 2;
+	}
+	if (!spoiler_text) {
+		count -= 2;
+		if (in_reply_to) {
+			args[4] = args[6];
+			args[5] = args[7]; // we have 2 pointers to the in_reply_to_id string now,
+		}
+	}
 	// No need to acknowledge the processing of a post: we will get notified.
 	mastodon_http(ic, MASTODON_STATUS_POST_URL, mastodon_http_callback, mc, HTTP_POST,
-	             args, in_reply_to ? 6 : 4);
+	             args, count);
 
-	g_free(args[5]);
+	g_free(args[7]); // but we only free one of them!
 }
 
 /**

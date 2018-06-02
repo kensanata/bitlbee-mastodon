@@ -29,6 +29,7 @@
 #include "mastodon.h"
 #include "mastodon-http.h"
 #include "mastodon-lib.h"
+#include "rot13.h"
 #include "url.h"
 #include "help.h"
 
@@ -568,15 +569,43 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 static void mastodon_post_message(struct im_connection *ic, char *message, guint64 in_reply_to,
 				  char *who, mastodon_message_t type)
 {
+	struct mastodon_data *md = ic->proto_data;
+	char *text = NULL;
+	// this is actually not the hidden text, but the hint
+	char *spoiler_text = NULL;
+	gboolean direct = FALSE;
+	int wlen;
+	char *s;
+	gboolean edge_case = FALSE;
+
 	if (!mastodon_length_check(ic, message)) {
 		return;
 	}
 
-	struct mastodon_data *md = ic->proto_data;
-	char *text = NULL;
-	gboolean direct = FALSE;
-	int wlen;
-	char *s;
+	// may have one, and only one, CW1
+	if (s = strstr(message, "\001")) {
+		char *s2;
+		if (s[1] != 'C' || s[2] != 'W' || s[3] != '1' || s[4] != ' ') {
+			return;
+		}
+		if (s2 = strstr(s + 5, "\001")) {
+			if (s2[1] != '\000') {
+				return;
+			}
+			text = g_strdup(s + 5);
+			*strstr(text, "\001") = '\0';
+			rot13(text);
+			// everything up to the hidden text is the hint
+			spoiler_text = g_strndup(message, s-message);
+		} else {
+			return;
+		}
+		// weird edge case of replying with no CW, not sure what I should be doing here.
+		if (s = strstr(who, "\001")) {
+			*s = '\0';
+			edge_case = TRUE;
+		}
+	}
 
 	switch (type) {
 	case MASTODON_DIRECT:
@@ -586,47 +615,78 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		/* Mentioning OP the traditional thing to do (but we should mention all previous mentions?) unless we're
 		   replying to ourselves. */
 		if (g_strcasecmp(who, md->user) != 0) {
-			text = g_strdup_printf("@%s %s", who, message);
+			if (text) {
+				s = g_strdup_printf("@%s %s", who, text);
+				g_free(text);
+				text = s;
+			} else {
+				text = g_strdup_printf("@%s %s", who, message);
+			}
 		}
 		break;
 	case MASTODON_NEW_MESSAGE:
 		// Do nothing.
 		break;
 	case MASTODON_MAYBE_REPLY:
-		wlen = strlen(who); // length of the first word
+		{
+			char *may_have_nick = spoiler_text ? spoiler_text : message;
+			wlen = strlen(who); // length of the first word
 
-		// If the message starts with "nick:" or "nick,"
-		if (who && wlen && strncmp(who, message, wlen) == 0 &&
-		    (s = message + wlen - 1) && (*s == ':' || *s == ',')) {
+			// If the message starts with "nick:" or "nick,"
+			if (who && wlen && strncmp(who, may_have_nick, wlen) == 0 &&
+			    (s = may_have_nick + wlen - 1) && (*s == ':' || *s == ',')) {
 
-			// Trim punctuation from who.
-			who[wlen - 1] = '\0';
+				// Trim punctuation from who.
+				who[wlen - 1] = '\0';
 
-			// Determine what we are replying to.
-			bee_user_t *bu;
-			if ((bu = bee_user_by_handle(ic->bee, ic, who))) {
-				struct mastodon_user_data *mud = bu->data;
+				// Determine what we are replying to.
+				bee_user_t *bu;
+				if ((bu = bee_user_by_handle(ic->bee, ic, who))) {
+					struct mastodon_user_data *mud = bu->data;
 
-				if (time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
-					in_reply_to = mud->last_id;
+					if (time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
+						in_reply_to = mud->last_id;
+					}
+
+					if (may_have_nick == message) {
+						// Change "foo: bar" to "@foo bar"
+						for (; s > may_have_nick; s--) {
+							*s = *(s - 1);
+						}
+						*s = '@';
+					} else {
+						// Put the mention in the message, not in the spoiler hint
+						char *tmp = g_strdup_printf("@%s %s", who, text);
+						g_free(text);
+						text = tmp;
+						if (*(s + 1) == ' ') {
+							s++;
+						}
+						memmove(spoiler_text, s, strlen(s) + 1);
+						if (edge_case) {
+							g_free(spoiler_text);
+							spoiler_text = NULL;
+						}
+					}
+				} else if (strcmp(who, md->user) == 0) {
+
+					// Replying to myself.
+					in_reply_to = md->last_id;
+
+					// Change "foo: bar" to "bar"
+					if (*(s + 1) == ' ') {
+						s++;
+					}
+					if (may_have_nick == message) {
+						message = s;
+					} else {
+						memmove(spoiler_text, s, strlen(s) + 1);
+						if (edge_case) {
+							g_free(spoiler_text);
+							spoiler_text = NULL;
+						}
+					}
 				}
-
-				// Change "foo: bar" to "@foo bar"
-				for (; s > message; s--) {
-					*s = *(s - 1);
-				}
-				*s = '@';
-
-			} else if (strcmp(who, md->user) == 0) {
-
-				// Replying to myself.
-				in_reply_to = md->last_id;
-
-				// Change "foo: bar" to "bar"
-				if (*(s + 1) == ' ') {
-					s++;
-				}
-				message = s;
 			}
 		}
 		break;
@@ -636,9 +696,10 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 	   this would delete the second-last toot. Prevent that. */
 	md->last_id = 0;
 
-	mastodon_post_status(ic, text ? text : message, in_reply_to, direct);
+	mastodon_post_status(ic, text ? text : message, in_reply_to, direct, spoiler_text);
 
 	g_free(text);
+	g_free(spoiler_text);
 }
 
 /**
