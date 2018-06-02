@@ -529,7 +529,10 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		GString *s = g_string_new(NULL);
 
 		if (spoiler_value) {
-			g_string_append_printf(s, "[CW: %s]", spoiler_value->u.string.ptr);
+			char *spoiler_text  = g_strdup(spoiler_value->u.string.ptr);
+			mastodon_strip_html(spoiler_text);
+			g_string_append_printf(s, "[CW: %s]", spoiler_text);
+			g_free(spoiler_text);
 			if (nsfw || !use_cw1) {
 				g_string_append(s, " ");
 			}
@@ -542,6 +545,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 
 		if (text_value) {
 			char *text = g_strdup(text_value->u.string.ptr);
+			mastodon_strip_html(text);
 			char *fmt = "%s";
 			if (spoiler_value && use_cw1) {
 				char *wrapped = NULL;
@@ -593,7 +597,6 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 
 		ms->text = g_string_free(s, FALSE); // we keep the data
 
-		mastodon_strip_html(ms->text);
 	}
 
 	g_slist_free(media); // elements are pointers into node and don't need to be freed
