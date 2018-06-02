@@ -249,6 +249,10 @@ static void mastodon_init(account_t * acc)
 
 	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
 
+	s = set_add(&acc->set, "hide_sensitive", "false", set_eval_bool, acc);
+
+	s = set_add(&acc->set, "sensitive_flag", "*NSFW* ", NULL, acc);
+
 	s = set_add(&acc->set, "app_id", "0", set_eval_int, acc);
 	s->flags |= SET_HIDDEN;
 

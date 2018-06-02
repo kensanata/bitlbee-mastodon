@@ -404,7 +404,7 @@ void mastodon_strip_html(char *in)
 /**
  * Function to fill a mastodon_status struct.
  */
-static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
+static struct mastodon_status *mastodon_xt_get_status(const json_value *node, struct im_connection *ic)
 {
 	struct mastodon_status *ms = {0};
 	const json_value *rt = NULL;
@@ -504,7 +504,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	}
 
 	if (rt) {
-		struct mastodon_status *rms = mastodon_xt_get_status(rt);
+		struct mastodon_status *rms = mastodon_xt_get_status(rt, ic);
 		if (rms) {
 			/* Alternatively, we could free ms and just use rms, but we'd have to overwrite rms->account
 			 * with ms->account, change rms->text, and maybe more. */
@@ -531,11 +531,21 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 		}
 
 		if (nsfw) {
-			g_string_append(s, "*NSFW* ");
+			char *sensitive_flag = set_getstr(&ic->acc->set, "sensitive_flag");
+			g_string_append(s, sensitive_flag);
 		}
 
 		if (text_value) {
-			g_string_append(s, text_value->u.string.ptr);
+			if (nsfw && set_getbool(&ic->acc->set, "hide_sensitive")) {
+				g_string_append(s, "[hidden");
+				if (ms->url) {
+					g_string_append(s, ": ");
+					g_string_append(s, ms->url);
+				}
+				g_string_append(s, "]");
+			} else {
+				g_string_append(s, text_value->u.string.ptr);
+			}
 		}
 
 		GSList *l = NULL;
@@ -572,7 +582,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 /**
  * Function to fill a mastodon_notification struct.
  */
-static struct mastodon_notification *mastodon_xt_get_notification(const json_value *node)
+static struct mastodon_notification *mastodon_xt_get_notification(const json_value *node, struct im_connection *ic)
 {
 	if (node->type != json_object) {
 		return FALSE;
@@ -595,7 +605,7 @@ static struct mastodon_notification *mastodon_xt_get_notification(const json_val
 		} else if (strcmp("account", k) == 0 && v->type == json_object) {
 			mn->account = mastodon_xt_get_user(v);
 		} else if (strcmp("status", k) == 0 && v->type == json_object) {
-			mn->status = mastodon_xt_get_status(v);
+			mn->status = mastodon_xt_get_status(v, ic);
 		} else if (strcmp("type", k) == 0 && v->type == json_string) {
 			if (strcmp(v->u.string.ptr, "mention") == 0) {
 				mn->type = MN_MENTION;
@@ -628,7 +638,7 @@ static gboolean mastodon_xt_get_status_list(struct im_connection *ic, const json
 
 	int i;
 	for (i = 0; i < node->u.array.length; i++) {
-		struct mastodon_status *ms = mastodon_xt_get_status(node->u.array.values[i]);
+		struct mastodon_status *ms = mastodon_xt_get_status(node->u.array.values[i], ic);
 		if (ms) {
 			ml->list = g_slist_prepend(ml->list, ms);
 		}
@@ -648,7 +658,7 @@ static gboolean mastodon_xt_get_notification_list(struct im_connection *ic, cons
 
 	int i;
 	for (i = 0; i < node->u.array.length; i++) {
-		struct mastodon_notification *mn = mastodon_xt_get_notification(node->u.array.values[i]);
+		struct mastodon_notification *mn = mastodon_xt_get_notification(node->u.array.values[i], ic);
 		if (mn) {
 			ml->list = g_slist_prepend(ml->list, mn);
 		}
@@ -940,7 +950,7 @@ static void mastodon_notification_show(struct im_connection *ic, struct mastodon
  */
 static void mastodon_stream_handle_notification(struct im_connection *ic, json_value *parsed)
 {
-	struct mastodon_notification *mn = mastodon_xt_get_notification(parsed);
+	struct mastodon_notification *mn = mastodon_xt_get_notification(parsed, ic);
 	if (mn) {
 		mastodon_notification_show(ic, mn);
 		mn_free(mn);
@@ -952,7 +962,7 @@ static void mastodon_stream_handle_notification(struct im_connection *ic, json_v
  */
 static void mastodon_stream_handle_update(struct im_connection *ic, json_value *parsed, mastodon_timeline_type_t subscription)
 {
-	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed, ic);
 	if (ms) {
 		ms->subscription = subscription;
 		mastodon_status_show(ic, ms);
@@ -1176,7 +1186,7 @@ static void mastodon_http_timeline(struct http_request *req, mastodon_timeline_t
 	int i;
 	for (i = parsed->u.array.length - 1; i >= 0 ; i--) {
 		json_value *node = parsed->u.array.values[i];
-		struct mastodon_status *ms = mastodon_xt_get_status(node);
+		struct mastodon_status *ms = mastodon_xt_get_status(node, ic);
 		ms->subscription = subscription;
 		mastodon_status_show(ic, ms);
 		ms_free(ms);
@@ -1428,7 +1438,7 @@ static void mastodon_http_callback(struct http_request *req)
 	case MC_UNKNOWN:
 		break;
 	case MC_POST:
-		ms = mastodon_xt_get_status(parsed);
+		ms = mastodon_xt_get_status(parsed, ic);
 		if (ms && ms->id && strcmp(ms->account->acct, md->user) == 0) {
 			md->last_id = ms->id;
 			if(md->undo_type == MASTODON_NEW) {
@@ -1755,7 +1765,7 @@ void mastodon_http_status_delete(struct http_request *req)
 	}
 
 	/* Remember the text  */
-	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed, ic);
 	struct mastodon_data *md = ic->proto_data;
 	if (ms && ms->id && strcmp(ms->account->acct, md->user) == 0) {
 		md->last_id = ms->id;
@@ -1841,7 +1851,7 @@ void mastodon_http_report(struct http_request *req)
 		goto finally;
 	}
 
-	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed, ic);
 	if (ms) {
 		mr->account_id = ms->account->id;
 		ms_free(ms);
@@ -2023,7 +2033,7 @@ static void mastodon_http_status_show_url(struct http_request *req)
 		return;
 	}
 
-	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed, ic);
 	if (ms) {
 		mastodon_log(ic, ms->url);
 		ms_free(ms);
@@ -2061,7 +2071,7 @@ static void mastodon_http_status_show_mentions(struct http_request *req)
 		return;
 	}
 
-	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed, ic);
 	if (ms) {
 		if (ms->mentions) {
 			GString *s = g_string_new("");
@@ -2204,7 +2214,7 @@ void mastodon_http_context_status(struct http_request *req)
 		goto end;
 	}
 
-	md->status_obj = mastodon_xt_get_status(parsed);
+	md->status_obj = mastodon_xt_get_status(parsed, ic);
 
 	json_value_free(parsed);
 end:
