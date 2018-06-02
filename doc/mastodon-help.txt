@@ -36,8 +36,10 @@ These settings will affect Mastodon accounts:
  set show_ids - display the "id" in front of every message
  set target_url_length - an URL counts as 23 characters
  set name - the name for your account channel
- set hide_sensitive - hide content marked as sensitive by the author
- set sensitive_flag - text to flag sensitive content with; default "*NSFW* "
+ set hide_sensitive - hide content marked as sensitive
+ set sensitive_flag - text to flag sensitive content with
+
+Use help to learn more about these options.
 %
 ?set name
 Type: string
@@ -50,6 +52,35 @@ Without a name set, Mastodon accounts will use host URL and acccount name to cre
 <kensanata> account mastodon set name masto
 <kensanata> account mastodon online
 <kensanata> save
+%
+?set hide_sensitive
+Type: boolean
+Scope: account
+Default: false
+
+By default, sensitive content (content behind a content warning) is simply shown. The content warning is printed, and then the sensitive content is printed.
+
+<somebody> [27] [CW: this is the warning] *NSFW* this is the text
+
+If you set this variable, sensitive content is not printed. Instead, you'll see "[hidden: <the URL>]". If you still want to read it, visit the URL.
+
+<kensanata> account mastodon set hide_sensitive true
+<kensanata> save
+
+Don't forget to save your settings.
+
+The result:
+
+<somebody> [27] [CW: this is the warning] *NSFW* [hidden: https://social.nasqueron.org/@kensanata/100133795756949791]
+
+All sensitive content is also marked as Not Safe For Work (NSFW) and flagged as such. You can change the text using an option, see help set sensitive_flag).
+%
+?set sensitive_flag
+Type: string
+Scope: account
+Default: "*NSFW* "
+
+This is the text to flag sensitive content with. The default is Not Safe For Work (NSFW). If you wanted to simply use red for the sensitive content, you could use "^C5", for example. Be sure to use an actual Control-C, here. This might be challenging to enter, depending on your IRC client. Sadly, that's how it goes. For more information, see <https://www.mirc.com/colors.html>.
 %
 ?account add mastodon
 Syntax: account add mastodon <handle>
