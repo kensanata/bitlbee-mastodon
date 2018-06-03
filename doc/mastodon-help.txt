@@ -57,6 +57,7 @@ Without a name set, Mastodon accounts will use host URL and acccount name to cre
 Type: boolean
 Scope: account
 Default: false
+Possible Values: true, false, rot13, advanced_rot13
 
 By default, sensitive content (content behind a content warning) is simply shown. The content warning is printed, and then the sensitive content is printed.
 
@@ -72,6 +73,15 @@ Don't forget to save your settings.
 The result:
 
 <somebody> [27] [CW: this is the warning] *NSFW* [hidden: https://social.nasqueron.org/@kensanata/100133795756949791]
+
+Additionally, when using rot13:
+
+<somebody> [27] [CW: this is the warning] *NSFW* guvf vf gur grkg
+
+And when using advanced_rot13:
+
+<somebody> [27] [CW: this is the warning] *NSFW* 
+<somebody> CW1 guvf vf gur grkg
 
 All sensitive content is also marked as Not Safe For Work (NSFW) and flagged as such. You can change the text using an option, see help set sensitive_flag).
 %

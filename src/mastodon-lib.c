@@ -31,6 +31,7 @@
 
 #include "mastodon-http.h"
 #include "mastodon.h"
+#include "rot13.h"
 #include "bitlbee.h"
 #include "url.h"
 #include "misc.h"
@@ -413,6 +414,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 	const json_value *url_value = NULL;
 	GSList *media = NULL;
 	gboolean nsfw = FALSE;
+	gboolean use_cw1 = g_strcasecmp(set_getstr(&ic->acc->set, "hide_sensitive"), "advanced_rot13") == 0;
 
 	if (node->type != json_object) {
 		return FALSE;
@@ -527,7 +529,13 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		GString *s = g_string_new(NULL);
 
 		if (spoiler_value) {
-			g_string_append_printf(s, "[CW: %s] ", spoiler_value->u.string.ptr);
+			char *spoiler_text  = g_strdup(spoiler_value->u.string.ptr);
+			mastodon_strip_html(spoiler_text);
+			g_string_append_printf(s, "[CW: %s]", spoiler_text);
+			g_free(spoiler_text);
+			if (nsfw || !use_cw1) {
+				g_string_append(s, " ");
+			}
 		}
 
 		if (nsfw) {
@@ -536,24 +544,47 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		}
 
 		if (text_value) {
-			if (nsfw && set_getbool(&ic->acc->set, "hide_sensitive")) {
-				g_string_append(s, "[hidden");
-				if (ms->url) {
-					g_string_append(s, ": ");
-					g_string_append(s, ms->url);
+			char *text = g_strdup(text_value->u.string.ptr);
+			mastodon_strip_html(text);
+			char *fmt = "%s";
+			if (spoiler_value && use_cw1) {
+				char *wrapped = NULL;
+				char **cwed = NULL;
+				rot13(text);
+				// "\001CW1 \001" = 6 bytes, there's also a nick length issue we take into account.
+				// there's also irc_format_timestamp which can add like 28 bytes or something.
+				wrapped = word_wrap(text, IRC_WORD_WRAP - 6 - MAX_NICK_LENGTH - 28);
+				g_free(text);
+				text = wrapped;
+				cwed = g_strsplit(text, "\n", -1); // easier than a regex
+				g_free(text);
+				text = g_strjoinv("\001\n\001CW1 ", cwed); // easier than a replace
+				g_strfreev(cwed);
+				fmt = "\n\001CW1 %s\001"; // add a newline at the start because that makes word wrap a lot easier (and because it matches the web UI better)
+			} else if (spoiler_value && g_strcasecmp(set_getstr(&ic->acc->set, "hide_sensitive"), "rot13") == 0) {
+				rot13(text);
+			} else if (spoiler_value && set_getbool(&ic->acc->set, "hide_sensitive")) {
+				g_free(text);
+				text = g_strdup(ms->url);
+				if (text) {
+					fmt = "[hidden: %s]";
+				} else {
+					fmt = "[hidden]";
 				}
-				g_string_append(s, "]");
-			} else {
-				g_string_append(s, text_value->u.string.ptr);
 			}
+			g_string_append_printf(s, fmt, text);
+			g_free(text);
 		}
 
 		GSList *l = NULL;
 		for (l = media; l; l = l->next) {
+			// TODO maybe support hiding media when it's marked NSFW.
+			// (note that only media is hidden when it's marked NSFW. the text still shows.)
+			// (note that we already don't show media, since this is all text, but IRC clients might.)
 
 			char *url = l->data;
 
-			if (strstr(s->str, url)) {
+			if ((text_value && strstr(text_value->u.string.ptr, url)) || strstr(s->str, url)) {
 				// skip URLs already in the text
 				continue;
 			}
@@ -566,7 +597,6 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 
 		ms->text = g_string_free(s, FALSE); // we keep the data
 
-		mastodon_strip_html(ms->text);
 	}
 
 	g_slist_free(media); // elements are pointers into node and don't need to be freed
@@ -1652,24 +1682,36 @@ static void mastodon_http_log_all(struct http_request *req)
  * Function to POST a new status to mastodon. We don't support the
  * visibility levels "private" and "unlisted".
  */
-void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean direct)
+void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean direct, char *spoiler_text)
 {
-	char *args[6] = {
+	char *args[8] = {
 		"status", msg,
 		"visibility", direct ? "direct" : "public",
+		"spoiler_text", spoiler_text,
 		"in_reply_to_id", g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
+	int count = 8;
 
 	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
 	mc->ic = ic;
 
 	mc->command = MC_POST;
 
+	if (!in_reply_to) {
+		count -= 2;
+	}
+	if (!spoiler_text) {
+		count -= 2;
+		if (in_reply_to) {
+			args[4] = args[6];
+			args[5] = args[7]; // we have 2 pointers to the in_reply_to_id string now,
+		}
+	}
 	// No need to acknowledge the processing of a post: we will get notified.
 	mastodon_http(ic, MASTODON_STATUS_POST_URL, mastodon_http_callback, mc, HTTP_POST,
-	             args, in_reply_to ? 6 : 4);
+	             args, count);
 
-	g_free(args[5]);
+	g_free(args[7]); // but we only free one of them!
 }
 
 /**
