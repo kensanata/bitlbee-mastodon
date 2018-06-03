@@ -90,7 +90,7 @@ All sensitive content is also marked as Not Safe For Work (NSFW) and flagged as 
 Scope: account
 Default: "*NSFW* "
 
-This is the text to flag sensitive content with. The default is Not Safe For Work (NSFW). If you wanted to simply use red for the sensitive content, you could use "^C5", for example. Be sure to use an actual Control-C, here. This might be challenging to enter, depending on your IRC client. Sadly, that's how it goes. For more information, see <https://www.mirc.com/colors.html>.
+This is the text to flag sensitive content with. The default is Not Safe For Work (NSFW). If you wanted to simply use red for the sensitive content, you could use "^C5", for example. Be sure to use an actual Control-C, here. This might be challenging to enter, depending on your IRC client. Sadly, that's how it goes. For more information, see https://www.mirc.com/colors.html.
 %
 ?account add mastodon
 Syntax: account add mastodon <handle>
