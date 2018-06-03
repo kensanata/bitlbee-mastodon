@@ -583,12 +583,12 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 	}
 
 	// may have one, and only one, CW1
-	if (s = strstr(message, "\001")) {
+	if ((s = strstr(message, "\001"))) {
 		char *s2;
 		if (s[1] != 'C' || s[2] != 'W' || s[3] != '1' || s[4] != ' ') {
 			return;
 		}
-		if (s2 = strstr(s + 5, "\001")) {
+		if ((s2 = strstr(s + 5, "\001"))) {
 			if (s2[1] != '\000') {
 				return;
 			}
@@ -601,7 +601,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 			return;
 		}
 		// weird edge case of replying with no CW, not sure what I should be doing here.
-		if (s = strstr(who, "\001")) {
+		if ((s = strstr(who, "\001"))) {
 			*s = '\0';
 			edge_case = TRUE;
 		}
