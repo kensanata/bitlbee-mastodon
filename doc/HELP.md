@@ -63,7 +63,7 @@ Without a name set, Mastodon accounts will use host URL and acccount name to cre
 
 By default, sensitive content (content behind a content warning) is simply shown. The content warning is printed, and then the sensitive content is printed.
 
-> **\<somebody\>** [27] [CW: this is the warning] *NSFW* this is the text  
+> **\<somebody\>** [27] [CW: this is the warning] \*NSFW\* this is the text  
 
 If you set this variable, sensitive content is not printed. Instead, you'll see "[hidden: \<the URL\>]". If you still want to read it, visit the URL.
 
@@ -74,15 +74,15 @@ Don't forget to save your settings.
 
 The result:
 
-> **\<somebody\>** [27] [CW: this is the warning] *NSFW* [hidden: https://social.nasqueron.org/@kensanata/100133795756949791]  
+> **\<somebody\>** [27] [CW: this is the warning] \*NSFW\* [hidden: https://social.nasqueron.org/@kensanata/100133795756949791]  
 
 Additionally, when using **rot13**:
 
-> **\<somebody\>** [27] [CW: this is the warning] *NSFW* guvf vf gur grkg  
+> **\<somebody\>** [27] [CW: this is the warning] \*NSFW\* guvf vf gur grkg  
 
 And when using **advanced_rot13**:
 
-> **\<somebody\>** [27] [CW: this is the warning] *NSFW*   
+> **\<somebody\>** [27] [CW: this is the warning] \*NSFW\*   
 > **\<somebody\>** CW1 guvf vf gur grkg  
 
 All sensitive content is also marked as Not Safe For Work (NSFW) and flagged as such. You can change the text using an option, see **help set sensitive_flag**).
@@ -90,7 +90,7 @@ All sensitive content is also marked as Not Safe For Work (NSFW) and flagged as 
 ## set sensitive_flag
 > **Type:** string  
 > **Scope:** account  
-> **Default:** "*NSFW* "  
+> **Default:** "\*NSFW\* "  
 
 This is the text to flag sensitive content with. The default is Not Safe For Work (NSFW). If you wanted to simply use red for the sensitive content, you could use "^C5", for example. Be sure to use an actual Control-C, here. This might be challenging to enter, depending on your IRC client. Sadly, that's how it goes. For more information, see \<https://www.mirc.com/colors.html\>.
 
@@ -126,7 +126,7 @@ Visit the URL the **mastodon_oauth** user gave you and authenticate the client. 
 
 > **\<mastodon_oauth\>** Open this URL in your browser to authenticate: https://.......  
 > **\<mastodon_oauth\>** Respond to this message with the returned authorization token.  
-> **\<kensanata\>** ****************************************************************  
+> **\<kensanata\>** \*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*  
 
 Once you do that, your login should complete in the **&bitlbee** channel:
 
