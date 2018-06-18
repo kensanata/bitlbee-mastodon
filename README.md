@@ -11,7 +11,14 @@ where you already have an account. The benefit is that you can now use
 [any IRC client](https://en.wikipedia.org/wiki/Comparison_of_Internet_Relay_Chat_clients)
 you want to connect to Mastodon.
 
-This plugin is distributed under the [GPLv2 license](LICENSE).
+Most of the source code is distributed under the
+[GNU Lesser Public License 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html#SEC1).
+
+The build system is distributed under the 
+[GNU Public License 2.0 or any later version](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html#SEC1).
+
+Anything without an obvious license in the file header also uses the
+GPL 2.0 or any later version.
 
 Usage
 -----
@@ -23,7 +30,8 @@ Please refer to the Bitlbee help system:
 ```
 
 Alternatively, a snapshot of the entries added to the help system by
-this plugin are available on the [help page](doc/HELP.md).
+this plugin are available on the
+[help page](https://alexschroeder.ch/cgit/bitlbee-mastodon/tree/doc/HELP.md#top).
 
 Build dependencies
 ------------------
@@ -105,5 +113,5 @@ Bugs
 ----
 
 Please report issues using the
-[GitHub tracker](https://github.com/kensanata/bitlbee-mastodon/issues).
-For questions, ping kensanata on irc.oftc.net/#bitlbee.
+[Software Wiki](https://alexschroeder.ch/software/Bitlbee_Mastodon).
+For questions, ping **kensanata** on `irc.oftc.net/#bitlbee`.
