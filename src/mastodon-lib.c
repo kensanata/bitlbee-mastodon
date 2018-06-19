@@ -1336,7 +1336,7 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		/* ic would have been freed in imc_logout in this situation */
 		ic = NULL;
-		goto end;
+		return;
 	}
 
 	struct mastodon_list *ml = g_new0(struct mastodon_list, 1);
@@ -1344,17 +1344,9 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 	mastodon_xt_get_status_list(ic, parsed, ml);
 	json_value_free(parsed);
 
-	if (ic->proto_data) {
-		md->home_timeline_obj = ml;
-	}
-end:
-	if (ic) {
-		if (ic->proto_data) {
-			md->flags |= MASTODON_GOT_TIMELINE;
-		}
-
-		mastodon_flush_timeline(ic);
-	}
+	md->home_timeline_obj = ml;
+	md->flags |= MASTODON_GOT_TIMELINE;
+	mastodon_flush_timeline(ic);
 }
 
 /**
@@ -1374,7 +1366,7 @@ static void mastodon_http_get_notifications(struct http_request *req)
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		/* ic would have been freed in imc_logout in this situation */
 		ic = NULL;
-		goto end;
+		return;
 	}
 
 	struct mastodon_list *ml = g_new0(struct mastodon_list, 1);
@@ -1383,13 +1375,8 @@ static void mastodon_http_get_notifications(struct http_request *req)
 	json_value_free(parsed);
 
 	md->notifications_obj = ml;
-
-end:
-
-	if (ic) {
-		md->flags |= MASTODON_GOT_NOTIFICATIONS;
-		mastodon_flush_timeline(ic);
-	}
+	md->flags |= MASTODON_GOT_NOTIFICATIONS;
+	mastodon_flush_timeline(ic);
 }
 
 static void mastodon_get_home_timeline(struct im_connection *ic)
@@ -1400,10 +1387,7 @@ static void mastodon_get_home_timeline(struct im_connection *ic)
 	md->home_timeline_obj = NULL;
 	md->flags &= ~MASTODON_GOT_TIMELINE;
 
-	if (mastodon_http(ic, MASTODON_HOME_TIMELINE_URL, mastodon_http_get_home_timeline, ic, HTTP_GET, NULL, 0) == NULL) {
-		md->flags |= MASTODON_GOT_TIMELINE;
-		mastodon_flush_timeline(ic);
-	}
+	mastodon_http(ic, MASTODON_HOME_TIMELINE_URL, mastodon_http_get_home_timeline, ic, HTTP_GET, NULL, 0);
 }
 
 static void mastodon_get_notifications(struct im_connection *ic)
@@ -1414,10 +1398,7 @@ static void mastodon_get_notifications(struct im_connection *ic)
 	md->notifications_obj = NULL;
 	md->flags &= ~MASTODON_GOT_NOTIFICATIONS;
 
-	if (mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_get_notifications, ic, HTTP_GET, NULL, 0) == NULL) {
-		md->flags |= MASTODON_GOT_NOTIFICATIONS;
-		mastodon_flush_timeline(ic);
-	}
+	mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_get_notifications, ic, HTTP_GET, NULL, 0);
 }
 
 /**
