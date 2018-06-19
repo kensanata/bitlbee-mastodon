@@ -1330,6 +1330,8 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 		return;
 	}
 
+	struct mastodon_data *md = ic->proto_data;
+
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		/* ic would have been freed in imc_logout in this situation */
@@ -1343,12 +1345,12 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 	json_value_free(parsed);
 
 	if (ic->proto_data) {
-		((struct mastodon_data *)ic->proto_data)->home_timeline_obj = ml;
+		md->home_timeline_obj = ml;
 	}
 end:
 	if (ic) {
 		if (ic->proto_data) {
-			((struct mastodon_data *)ic->proto_data)->flags |= MASTODON_GOT_TIMELINE;
+			md->flags |= MASTODON_GOT_TIMELINE;
 		}
 
 		mastodon_flush_timeline(ic);
