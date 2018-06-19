@@ -1423,7 +1423,7 @@ static void mastodon_get_notifications(struct im_connection *ic)
  * timeline, and notifications. During normal use, these are provided
  * via the Streaming API. However, when we connect to an instance we
  * want to load the home timeline and notifications. In order to sort
- * them in a meaningful way, we these flags:
+ * them in a meaningful way, we use these flags:
  * MASTODON_GOT_TIMELINE to indicate that we now have home timeline,
  * MASTODON_GOT_NOTIFICATIONS to indicate that we now have notifications.
  * Both callbacks will attempt to flush the initial timeline, but this
@@ -2598,7 +2598,7 @@ void mastodon_following(struct im_connection *ic)
 }
 
 /**
- * Callback for getting your own account.
+ * Callback for getting your own account. This saves the account_id.
  */
 static void mastodon_http_verify_credentials(struct http_request *req)
 {

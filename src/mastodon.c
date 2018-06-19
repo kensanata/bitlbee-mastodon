@@ -353,6 +353,9 @@ static void mastodon_connect(struct im_connection *ic)
 	ic->flags |= OPT_PONGS;
 }
 
+/**
+ * Initiate OAuth dialog with user. A reply to the MASTODON_OAUTH_HANDLE is handled by mastodon_buddy_msg.
+ */
 void oauth2_init(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
@@ -442,8 +445,7 @@ static void mastodon_login(account_t * acc)
 	else {
 		oauth2_init(ic);
 	}
-	/* All of the above will end up calling mastodon_connect() in
-	   the end. */
+	/* All of the above will end up calling mastodon_connect(). */
 
 	oauth_params_free(&p_in);
 }
@@ -483,8 +485,10 @@ static void mastodon_logout(struct im_connection *ic)
 	mastodon_connections = g_slist_remove(mastodon_connections, ic);
 }
 
-
-
+/**
+ * When the user replies to the MASTODON_OAUTH_HANDLE with a refresh token we request the access token and this is where we get it.
+ * Save both in our settings and proceed to mastodon_connect.
+ */
 void oauth2_got_token(gpointer data, const char *access_token, const char *refresh_token, const char *error)
 {
 	struct im_connection *ic = data;
@@ -531,6 +535,10 @@ static gboolean oauth2_remove_contact(gpointer data, gint fd, b_input_condition 
 	return FALSE;
 }
 
+/**
+ * Get the refresh token from the user via a reply to MASTODON_OAUTH_HANDLE in mastodon_buddy_msg.
+ * Then get the access token Using the refresh token. The access token is then handled by oauth2_got_token.
+ */
 int oauth2_get_refresh_token(struct im_connection *ic, const char *msg)
 {
 	struct mastodon_data *md = ic->proto_data;
