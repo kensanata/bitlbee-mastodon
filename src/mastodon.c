@@ -337,10 +337,8 @@ static void mastodon_connect(struct im_connection *ic)
 
 	if (!(md->flags & MASTODON_MODE_ONE) &&
 	    !(md->flags & MASTODON_HAVE_FRIENDS)) {
-		// find our id
+		// find our account_id and store it, eventually
 		mastodon_verify_credentials(ic);
-		// add buddies for this id
-		mastodon_following(ic);
 	}
 
 	/* Create the room. */

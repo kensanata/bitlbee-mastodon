@@ -2494,7 +2494,6 @@ static void mastodon_http_following(struct http_request *req)
 	}
 
 	if (parsed->type != json_array || parsed->u.array.length == 0) {
-		// no log message
 		goto finish;
 	}
 
@@ -2535,7 +2534,7 @@ finish:
 				len++;
 			} else if (url && header[i] == '>') {
 				header[i] = 0;
-				if (strncmp(header + i, "; rel=\"next\"", 12) == 0) {
+				if (strncmp(header + i + 1, "; rel=\"next\"", 12) == 0) {
 					break;
 				} else {
 					url = NULL;
@@ -2582,6 +2581,7 @@ void mastodon_following(struct im_connection *ic)
 
 /**
  * Callback for getting your own account. This saves the account_id.
+ * Once we have that, we are ready to figure out who our followers are.
  */
 static void mastodon_http_verify_credentials(struct http_request *req)
 {
@@ -2592,10 +2592,15 @@ static void mastodon_http_verify_credentials(struct http_request *req)
 
 	json_value *parsed;
 	if ((parsed = mastodon_parse_response(ic, req))) {
-
-		set_setint(&ic->acc->set, "account_id", json_o_get(parsed, "id")->u.integer);
-
+		json_value *it;
+		guint64 id;
+		if ((it = json_o_get(parsed, "id")) &&
+		    (id = mastodon_json_int64(it))) {
+			set_setint(&ic->acc->set, "account_id", id);
+		}
 		json_value_free(parsed);
+
+		mastodon_following(ic);
 	}
 }
 
