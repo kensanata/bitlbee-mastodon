@@ -5,7 +5,7 @@
 *                                                                           *
 *  Copyright 2009-2010 Geert Mulders <g.c.w.m.mulders@gmail.com>            *
 *  Copyright 2010-2013 Wilmer van der Gaast <wilmer@gaast.net>              *
-*  Copyright 2017 Alex Schroeder <alex@gnu.org>                             *
+*  Copyright 2017-2018 Alex Schroeder <alex@gnu.org>                        *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
