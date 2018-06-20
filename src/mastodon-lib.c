@@ -2082,14 +2082,31 @@ void mastodon_status_show_url(struct im_connection *ic, guint64 id)
 
 /**
  * Append a string data to a gstring user_data, separated with a comma, if necessary. This is to be used with
- * g_list_foreach().
+ * g_list_foreach(). The prefix "@" is added in front of every element.
  */
 static void mastodon_string_append(gchar *data, GString *user_data)
 {
 	if (user_data->len > 0) {
 		g_string_append(user_data, ", ");
 	}
+	g_string_append(user_data, "@");
 	g_string_append(user_data, data);
+}
+
+/**
+ * Join all the strings in a list, comma-separated. Be sure to free the returned GString with g_string_free(). If there
+ * is no initial element for the list, use NULL for the second argument. The prefix "@" is added in front of every
+ * element. It is added to the initial element, too!
+ */
+GString *mastodon_string_join(GSList *l, gchar *init)
+{
+	GString *s = g_string_new(NULL);
+	if (init) {
+		g_string_append(s, "@");
+		g_string_append(s, init);
+	}
+	g_slist_foreach(l, (GFunc) mastodon_string_append, s);
+	return s;
 }
 
 /**
@@ -2098,8 +2115,7 @@ static void mastodon_string_append(gchar *data, GString *user_data)
 void mastodon_show_mentions(struct im_connection *ic, GSList *l)
 {
 	if (l) {
-		GString *s = g_string_new(NULL);
-		g_slist_foreach(l, (GFunc) mastodon_string_append, s);
+		GString *s = mastodon_string_join(l, NULL);
 		mastodon_log(ic, "Mentioned: %s", s->str);
 		g_string_free(s, TRUE);
 	} else {
