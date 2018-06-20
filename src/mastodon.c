@@ -470,12 +470,19 @@ static void mastodon_logout(struct im_connection *ic)
 		}
 
 		g_slist_free(md->streams); md->streams = NULL;
+
+		int i;
+		for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
+			g_slist_free_full(md->log[i].mentions, g_free); md->log[i].mentions = NULL;
+		}
+
+		g_free(md->log); md->log = NULL;
+
 		os_free(md->oauth2_service); md->oauth2_service = NULL;
 		g_free(md->user); md->user = NULL;
 		g_free(md->name); md->name = NULL;
 		g_free(md->url_host); md->url_host = NULL;
 		g_free(md->url_path); md->url_path = NULL;
-		g_free(md->log); md->log = NULL;
 		g_free(md);
 		ic->proto_data = NULL;
 	}
@@ -1314,8 +1321,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		if ((bu = mastodon_user_by_nick(ic, cmd[1]))) {
 			mastodon_log(ic, "%s [%s]", bu->handle, bu->fullname);
 		} else if ((parse_int64(cmd[1], 16, &id) && id < MASTODON_LOG_LENGTH)) {
-			id = md->log[id].id;
-			mastodon_status_show_mentions(ic, id);
+			mastodon_show_mentions(ic, md->log[id].mentions);
 		} else if ((parse_int64(cmd[1], 10, &id))) {
 			mastodon_status_show_mentions(ic, id);
 		} else if (g_strcasecmp(cmd[1], md->user) == 0) {

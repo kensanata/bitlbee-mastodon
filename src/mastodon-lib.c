@@ -700,7 +700,7 @@ static gboolean mastodon_xt_get_notification_list(struct im_connection *ic, cons
 /* Will log messages either way. Need to keep track of IDs for stream deduping.
    Plus, show_ids is on by default and I don't see why anyone would disable it. */
 static char *mastodon_msg_add_id(struct im_connection *ic,
-                                struct mastodon_status *ms, const char *prefix)
+				 struct mastodon_status *ms, const char *prefix)
 {
 	struct mastodon_data *md = ic->proto_data;
 	int reply_to = -1;
@@ -721,11 +721,12 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 	}
 
 	/* If we didn't find the status, it's new and needs an id, and we want to record who said it, and when they said
-	 * it. */
+	 * it, and who they mentioned. */
 	if (idx == -1) {
 		idx = md->log_id = (md->log_id + 1) % MASTODON_LOG_LENGTH;
 		md->log[idx].id = ms->id;
-
+		g_slist_free_full(md->log[idx].mentions, g_free);
+		md->log[idx].mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) g_strdup, NULL);
 		if (g_strcasecmp(ms->account->acct, md->user) == 0) {
 			/* If this is our own status, use a fake bu without data since we can't be found by handle. This
 			 * will allow us to reply to our own messages, for example. */
@@ -2080,6 +2081,33 @@ void mastodon_status_show_url(struct im_connection *ic, guint64 id)
 }
 
 /**
+ * Append a string data to a gstring user_data, separated with a comma, if necessary. This is to be used with
+ * g_list_foreach().
+ */
+static void mastodon_string_append(gchar *data, GString *user_data)
+{
+	if (user_data->len > 0) {
+		g_string_append(user_data, ", ");
+	}
+	g_string_append(user_data, data);
+}
+
+/**
+ * Show the list of mentions for a status in our log data.
+ */
+void mastodon_show_mentions(struct im_connection *ic, GSList *l)
+{
+	if (l) {
+		GString *s = g_string_new(NULL);
+		g_slist_foreach(l, (GFunc) mastodon_string_append, s);
+		mastodon_log(ic, "Mentioned: %s", s->str);
+		g_string_free(s, TRUE);
+	} else {
+		mastodon_log(ic, "Nobody was mentioned in this toot");
+	}
+}
+
+/**
  * Callback for showing the mentions of a status.
  */
 static void mastodon_http_status_show_mentions(struct http_request *req)
@@ -2098,22 +2126,7 @@ static void mastodon_http_status_show_mentions(struct http_request *req)
 
 	struct mastodon_status *ms = mastodon_xt_get_status(parsed, ic);
 	if (ms) {
-		if (ms->mentions) {
-			GString *s = g_string_new("");
-			GSList *l;
-			for (l = ms->mentions; l; l = l->next) {
-				char *acct = l->data;
-				if (l != ms->mentions) {
-					g_string_append(s, " ");
-				}
-				g_string_append(s, acct);
-
-			}
-			mastodon_log(ic, s->str);
-			g_string_free (s, TRUE);
-		} else {
-			mastodon_log(ic, "This toot mentions nobody.");
-		}
+		mastodon_show_mentions(ic, ms->mentions);
 		ms_free(ms);
 	} else {
 		mastodon_log(ic, "Error: could not fetch toot url.");

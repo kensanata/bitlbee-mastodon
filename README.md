@@ -62,15 +62,15 @@ configuration script and related files by executing the following
 command:
 
 ```
-$ ./autogen.sh
+./autogen.sh
 ```
 
 After that (or when building from a tarball) you can build as usual:
 
 ```
-$ ./configure
-$ make
-$ sudo make install
+./configure
+make
+sudo make install
 ```
 
 🔥 If your Bitlbee's plugindir is in a non-standard location you need to
@@ -95,8 +95,34 @@ it exchanges with Mastodon servers to STDOUT and there is a lot of it.
 To get it on your screen run `bitlbee` in foreground mode:
 
 ```
-$ BITLBEE_DEBUG=1 bitlbee -nvD
+BITLBEE_DEBUG=1 bitlbee -nvD
 ```
+
+If you need to read your config file from the standard location:
+
+```
+BITLBEE_DEBUG=1 sudo -u bitlbee bitlbee -nvD
+```
+
+If you need to use a debugger, make a copy of
+`/etc/bitlbee/bitlbee.conf` (or simply create an empty file) and
+`/var/lib/bitlbee/`. Then run `gdb`, set the breakpoints you want
+(answer yes to "Make breakpoint pending on future shared library
+load?"), and run it using the options shown:
+
+```
+touch bitlbee.conf
+sudo cp /var/lib/bitlbee/*.xml .
+gdb bitlbee
+b mastodon_string_join
+y
+run -nvD -c bitlbee.conf -d .
+```
+
+Note that perhaps you must remove the `-O2` from `CFLAGS` in the
+`Makefile` and run `make clean && make && sudo make install` again in
+order to build and install the module without any compiler
+optimisation.
 
 Then connect with an IRC client as you usually do.
 

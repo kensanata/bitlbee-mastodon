@@ -140,6 +140,7 @@ struct mastodon_log_data {
 	/* DANGER: bu can be a dead pointer. Check it first.
 	 * mastodon_message_id_from_command_arg() will do this. */
 	struct bee_user *bu;
+	GSList *mentions;
 };
 
 /**
