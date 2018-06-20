@@ -407,6 +407,7 @@ void mastodon_strip_html(char *in)
  */
 static struct mastodon_status *mastodon_xt_get_status(const json_value *node, struct im_connection *ic)
 {
+	struct mastodon_data *md = ic->proto_data;
 	struct mastodon_status *ms = {0};
 	const json_value *rt = NULL;
 	const json_value *text_value = NULL;
@@ -475,7 +476,8 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 				json_value *mention = v->u.array.values[i];
 				if (mention->type == json_object) {
 					const char *acct = json_o_str(mention, "acct");
-					if (acct) {
+					/* skip us as we only need these mentions for replies we write */
+					if (acct && strcmp(acct, md->user) != 0) {
 						l = g_slist_prepend(l, g_strdup(acct));
 					}
 				}
@@ -738,6 +740,8 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 			if (ms->id > mud->last_id) {
 				mud->last_id = ms->id;
 				mud->last_time = ms->created_at;
+				g_slist_free_full(mud->mentions, g_free);
+				mud->mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) g_strdup, NULL);
 			}
 
 			md->log[idx].bu = bu;

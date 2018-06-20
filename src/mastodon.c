@@ -609,7 +609,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 			*strstr(text, "\001") = '\0';
 			rot13(text);
 			// everything up to the hidden text is the hint
-			spoiler_text = g_strndup(message, s-message);
+			spoiler_text = g_strndup(message, s - message);
 		} else {
 			return;
 		}
@@ -628,13 +628,13 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		/* Mentioning OP and other mentions is the traditional thing to do. */
 		m = NULL;
 		if (g_strcasecmp(who, md->user) == 0) {
+			/* if replying to ourselves, we still want to mention others, if any */
 			if (mentions) {
-				/* if replying to ourselves, keep mentioning others */
 				m = mastodon_string_join(mentions, NULL);
 			}
 			/* if no mentions and replying to ourselves, m remains NULL */
 		} else {
-			/* if replying to others, mention then and others */
+			/* if replying to others, mention them, too */
 			m = mastodon_string_join(mentions, who);
 		}
 		if (m) {
@@ -670,27 +670,17 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 
 					if (time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
 						in_reply_to = mud->last_id;
-					}
 
-					if (may_have_nick == message) {
-						// Change "foo: bar" to "@foo bar"
-						for (; s > may_have_nick; s--) {
-							*s = *(s - 1);
+						// We're always replying to at least one person.
+						m = mastodon_string_join(mentions, who);
+						if (text) {
+							s = g_strdup_printf("%s %s", m->str, text);
+							g_free(text);
+							text = s;
+						} else {
+							text = g_strdup_printf("%s %s", m->str, message);
 						}
-						*s = '@';
-					} else {
-						// Put the mention in the message, not in the spoiler hint
-						char *tmp = g_strdup_printf("@%s %s", who, text);
-						g_free(text);
-						text = tmp;
-						if (*(s + 1) == ' ') {
-							s++;
-						}
-						memmove(spoiler_text, s, strlen(s) + 1);
-						if (edge_case) {
-							g_free(spoiler_text);
-							spoiler_text = NULL;
-						}
+						g_string_free(m, TRUE);
 					}
 				} else if (strcmp(who, md->user) == 0) {
 
@@ -845,6 +835,8 @@ static void mastodon_buddy_data_add(bee_user_t *bu)
 
 static void mastodon_buddy_data_free(bee_user_t *bu)
 {
+	struct mastodon_user_data *mud = (struct mastodon_user_data*) bu->data;
+	g_slist_free_full(mud->mentions, g_free); mud->mentions = NULL;
 	g_free(bu->data);
 }
 
@@ -890,6 +882,9 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 	if (arg[0] != '#' && (bu = mastodon_user_by_nick(ic, arg))) {
 		if ((mud = bu->data)) {
 			id = mud->last_id;
+			if (mentions) {
+				*mentions = mud->mentions;
+			}
 		}
 	} else {
 		if (arg[0] == '#') {
