@@ -653,7 +653,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		break;
 	case MASTODON_MAYBE_REPLY:
 		{
-			char *may_have_nick = spoiler_text ? spoiler_text : message;
+			char *may_have_nick = spoiler_text ? spoiler_text : message; // part of message which may have a "nick:" or "nick,"
 			wlen = strlen(who); // length of the first word
 
 			// If the message starts with "nick:" or "nick,"
@@ -670,16 +670,28 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 
 					if (time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
 						in_reply_to = mud->last_id;
-
 						// We're always replying to at least one person.
 						m = mastodon_string_join(mentions, who);
-						if (text) {
+
+						if (!spoiler_text) { // no CW, standard logic
+							if (text) {
+								s = g_strdup_printf("%s %s", m->str, text + wlen + 1); // +wlen+1 to remove "nick: " (note the space) from text
+								g_free(text);
+								text = s;
+							} else {
+								text = g_strdup_printf("%s %s", m->str, message + wlen + 1); // +wlen+1 to remove "nick: " (note the space) from message
+							}
+						} else { // has CW, let's fix it up and add mentions
+							// spoiler_text != NULL should imply text != NULL, compilers should optimize this assert out
+							g_assert(text != NULL);
 							s = g_strdup_printf("%s %s", m->str, text);
 							g_free(text);
 							text = s;
-						} else {
-							text = g_strdup_printf("%s %s", m->str, message);
+							// memmove works with overlapping pointers (unlike memcpy), so this is safe.
+							// DO NOT USE memcpy!
+							memmove(spoiler_text, spoiler_text + wlen + 1, strlen(spoiler_text + wlen + 1) + 1); // +wlen+1 to remove "nick: " (note the space) from spoiler_text. strlen+1 to include terminating '\0'.
 						}
+
 						g_string_free(m, TRUE);
 					}
 				} else if (strcmp(who, md->user) == 0) {
