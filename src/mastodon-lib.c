@@ -514,11 +514,24 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 			 * with ms->account, change rms->text, and maybe more. */
 			ms->text = g_strdup_printf("boosted @%s: %s", rms->account->acct, rms->text);
 			ms->id = rms->id;
+
 			ms->url = rms->url; // adopt
 			rms->url = NULL;
+
 			g_slist_free_full(ms->tags, g_free);
 			ms->tags = rms->tags; // adopt
 			rms->tags = NULL;
+
+			g_slist_free_full(ms->mentions, g_free);
+			ms->mentions = rms->mentions; // adopt
+			rms->mentions = NULL;
+
+			if (strcmp(rms->account->acct, md->user) != 0) {
+				// add original author to mentions of boost if not ourselves
+				ms->mentions = g_slist_prepend(ms->mentions, rms->account->acct); // adopt
+				rms->account->acct = NULL;
+			}
+
 			ms_free(rms);
 		}
 	} else if (ms->id) {
