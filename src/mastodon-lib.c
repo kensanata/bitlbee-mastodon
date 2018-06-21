@@ -2322,39 +2322,6 @@ void mastodon_context(struct im_connection *ic, guint64 id)
 	g_free(url);
 }
 
-/**
- * Callback for a reponse containing one or more statuses which are to
- * be shown, usually the result of looking at the statuses of an
- * account.
- */
-void mastodon_http_statuses(struct http_request *req)
-{
-	mastodon_http_timeline(req, MT_HOME);
-}
-
-/**
- * Show the timeline of a user.
- */
-void mastodon_account_statuses(struct im_connection *ic, guint64 id)
-{
-	char *url = g_strdup_printf(MASTODON_ACCOUNT_STATUSES_URL, id);
-	mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, NULL, 0);
-	g_free(url);
-}
-
-/**
- * Show the pinned statuses of a user.
- */
-void mastodon_account_pinned_statuses(struct im_connection *ic, guint64 id)
-{
-	char *args[2] = {
-		"pinned", "1",
-	};
-
-	char *url = g_strdup_printf(MASTODON_ACCOUNT_STATUSES_URL, id);
-	mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, args, 2);
-	g_free(url);
-}
 
 /**
  * The callback functions for mastodon_http_statuses_chain() should look like this, e.g. mastodon_account_statuses or
@@ -2403,9 +2370,41 @@ finish:
 }
 
 /**
- * Callback to display the timeline for a unknown user. We got the
- * account data back and now we just take the first user and display
- * their timeline.
+ * Callback for a reponse containing one or more statuses which are to
+ * be shown, usually the result of looking at the statuses of an
+ * account.
+ */
+void mastodon_http_statuses(struct http_request *req)
+{
+	mastodon_http_timeline(req, MT_HOME);
+}
+
+/**
+ * Show the timeline of a user.
+ */
+void mastodon_account_statuses(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf(MASTODON_ACCOUNT_STATUSES_URL, id);
+	mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, NULL, 0);
+	g_free(url);
+}
+
+/**
+ * Show the pinned statuses of a user.
+ */
+void mastodon_account_pinned_statuses(struct im_connection *ic, guint64 id)
+{
+	char *args[2] = {
+		"pinned", "1",
+	};
+
+	char *url = g_strdup_printf(MASTODON_ACCOUNT_STATUSES_URL, id);
+	mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, args, 2);
+	g_free(url);
+}
+/**
+ * Callback to display the timeline for a unknown user. We got the account data back and now we just take the first user
+ * and display their timeline.
  */
 void mastodon_http_unknown_account_statuses(struct http_request *req)
 {
@@ -2413,8 +2412,7 @@ void mastodon_http_unknown_account_statuses(struct http_request *req)
 }
 
 /**
- * Show the timeline of an unknown user. Thus, we first have to search
- * for them.
+ * Show the timeline of an unknown user. Thus, we first have to search for them.
  */
 void mastodon_unknown_account_statuses(struct im_connection *ic, char *who)
 {
@@ -2422,9 +2420,8 @@ void mastodon_unknown_account_statuses(struct im_connection *ic, char *who)
 }
 
 /**
- * Callback to display the timeline for a unknown user. We got the
- * account data back and now we just take the first user and display
- * their timeline.
+ * Callback to display the timeline for a unknown user. We got the account data back and now we just take the first user
+ * and display their timeline.
  */
 void mastodon_http_unknown_account_pinned_statuses(struct http_request *req)
 {
@@ -2432,12 +2429,64 @@ void mastodon_http_unknown_account_pinned_statuses(struct http_request *req)
 }
 
 /**
- * Show the timeline of an unknown user. Thus, we first have to search
- * for them.
+ * Show the timeline of an unknown user. Thus, we first have to search for them.
  */
 void mastodon_unknown_account_pinned_statuses(struct im_connection *ic, char *who)
 {
 	mastodon_with_search_account(ic, who, mastodon_http_unknown_account_pinned_statuses);
+}
+
+/**
+ * Callback for the user bio.
+ */
+void mastodon_http_account_bio(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		return;
+	}
+
+	const char *display_name = json_o_str(parsed, "display_name");
+	char *note = g_strdup(json_o_str(parsed, "note"));
+	mastodon_strip_html(note); // modified in place
+
+	mastodon_log(ic, "Bio for %s: %s", display_name, note);
+
+	g_free(note);
+	json_value_free(parsed);
+}
+
+/**
+ * Show a user bio.
+ */
+void mastodon_account_bio(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf(MASTODON_ACCOUNT_URL, id);
+	mastodon_http(ic, url, mastodon_http_account_bio, ic, HTTP_GET, NULL, 0);
+	g_free(url);
+}
+/**
+ * Callback to display the timeline for a unknown user. We got the account data back and now we just take the first user
+ * and show their bio.
+ */
+void mastodon_http_unknown_account_bio(struct http_request *req)
+{
+	mastodon_chained_account(req, mastodon_account_bio);
+}
+
+/**
+ * Show the bio of an unknown user. Thus, we first have to search for them.
+ */
+void mastodon_unknown_account_bio(struct im_connection *ic, char *who)
+{
+	mastodon_with_search_account(ic, who, mastodon_http_unknown_account_bio);
 }
 
 /**

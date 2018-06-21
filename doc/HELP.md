@@ -224,6 +224,8 @@ Use **url &lt;id|nick&gt;** to get the URL to a status or the last status by a n
 
 Use **whois &lt;id|nick&gt;** to show handle and full name by a nick, or of all the nicks mentioned in a status.
 
+Use **bio &lt;nick&gt;** to show the bio of a nick.
+
 Use **pinned &lt;nick&gt;** to show the pinned statuses of a nick.
 
 Use **info instance** to get debug information about your instance.

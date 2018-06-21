@@ -222,6 +222,8 @@ Use url <id|nick> to get the URL to a status or the last status by a nick.
 
 Use whois <id|nick> to show handle and full name by a nick, or of all the nicks mentioned in a status.
 
+Use bio <nick> to show the bio of a nick.
+
 Use pinned <nick> to show the pinned statuses of a nick.
 
 Use info instance to get debug information about your instance.

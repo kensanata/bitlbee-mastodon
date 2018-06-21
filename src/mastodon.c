@@ -1385,6 +1385,13 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		} else {
 			mastodon_unknown_account_pinned_statuses(ic, cmd[1]);
 		}
+	} else if (g_strcasecmp(cmd[0], "bio") == 0 && cmd[1]) {
+		if ((bu = mastodon_user_by_nick(ic, cmd[1])) &&
+		    (id = mastodon_account_id(bu))) {
+			mastodon_account_bio(ic, id);
+		} else {
+			mastodon_unknown_account_bio(ic, cmd[1]);
+		}
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
 		GSList *mentions = NULL;
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], &bu, &mentions))) {

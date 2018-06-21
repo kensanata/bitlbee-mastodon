@@ -109,3 +109,5 @@ void mastodon_account_statuses(struct im_connection *ic, guint64 id);
 void mastodon_unknown_account_statuses(struct im_connection *ic, char *who);
 void mastodon_account_pinned_statuses(struct im_connection *ic, guint64 id);
 void mastodon_unknown_account_pinned_statuses(struct im_connection *ic, char *who);
+void mastodon_account_bio(struct im_connection *ic, guint64 id);
+void mastodon_unknown_account_bio(struct im_connection *ic, char *who);
