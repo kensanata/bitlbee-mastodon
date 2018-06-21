@@ -175,13 +175,11 @@ Use context <id|nick> to show some context for a status or the last status by 
 Use timeline <nick> to show the most recent messages by a nick.
 %
 ?mreply
-If you use the default IRC conventions of starting a message with a nickname and a colon (:) or a comma (,), then your message will be treated as a reply to that nick's last message.
+If you use the default IRC conventions of starting a message with a nickname and a colon (:) or a comma (,), then your message will be treated as a reply to that nick's last message. As is custom, the recipient and all the people they mentioned in their toot will get mentioned in your reply.
 
 This only works if that nick's last message was sent within the last 3h. For more information about this time window use help set auto_reply_timeout in your Bitlbee control channel (&bitlbee).
 
-You can also reply to an earlier message by referring to its id using the reply <id> <message> command. The handle of the original author you are replying to will be prepended automatically. It is up to you to mention any of the other people mentioned in the original.
-
-Use whois <id|nick> to show handle and full name by a nick, or of all the nicks mentioned in a status.
+You can also reply to an earlier message by referring to its id using the reply <id> <message> command. Again, the recipient and all the people they mentioned in their toot will get mentioned in your reply.
 
 If you set the commands setting to strict, using the reply command is mandatory.
 %
@@ -221,6 +219,8 @@ Use unboost <id|nick> to unboost a status or the last status by a nick.
 %
 ?mmore
 Use url <id|nick> to get the URL to a status or the last status by a nick.
+
+Use whois <id|nick> to show handle and full name by a nick, or of all the nicks mentioned in a status.
 
 Use info instance to get debug information about your instance.
 
