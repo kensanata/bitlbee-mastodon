@@ -224,6 +224,8 @@ Use **url \<id|nick\>** to get the URL to a status or the last status by a nick.
 
 Use **whois \<id|nick\>** to show handle and full name by a nick, or of all the nicks mentioned in a status.
 
+Use **pinned \<nick\>** to show the pinned statuses of a nick.
+
 Use **info instance** to get debug information about your instance.
 
 Use **info user \<nick|account\>** to get debug information about an account.

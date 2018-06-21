@@ -2343,11 +2343,33 @@ void mastodon_account_statuses(struct im_connection *ic, guint64 id)
 }
 
 /**
- * Callback to display the timeline for a unknown user. We got the
- * account data back and now we just take the first user and display
- * their timeline.
+ * Show the pinned statuses of a user.
  */
-void mastodon_http_unknown_account_statuses(struct http_request *req)
+void mastodon_account_pinned_statuses(struct im_connection *ic, guint64 id)
+{
+	char *args[2] = {
+		"pinned", "1",
+	};
+
+	char *url = g_strdup_printf(MASTODON_ACCOUNT_STATUSES_URL, id);
+	mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, args, 2);
+	g_free(url);
+}
+
+/**
+ * The callback functions for mastodon_http_statuses_chain() should look like this, e.g. mastodon_account_statuses or
+ * mastodon_account_pinned_statuses. The way this works: If you know the id of an account, call the function directly:
+ * mastodon_account_statuses(). The callback for this is mastodon_http_statuses() which uses mastodon_http_timeline() to
+ * display the statuses. If you don't know the id of an account by you know the "who" of the account, call a function
+ * like mastodon_unknown_account_statuses(). It calls mastodon_with_search_account() and the callback for this is
+ * mastodon_http_unknown_account_statuses(). The http_request it gets has the account(s) you need. Call
+ * mastodon_chained_account() which parses the request and determines the actual account id. Finally, it calls the last
+ * callback, which mastodon_account_statuses(), with the account id. And we already know how that works! Phew!!
+ *
+ */
+typedef void (*mastodon_chained_account_function)(struct im_connection *ic, guint64 id);
+
+void mastodon_chained_account(struct http_request *req, mastodon_chained_account_function func)
 {
 	struct im_connection *ic = req->data;
 	if (!g_slist_find(mastodon_connections, ic)) {
@@ -2370,7 +2392,7 @@ void mastodon_http_unknown_account_statuses(struct http_request *req)
 	struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[0]);
 
 	if (ma) {
-		mastodon_account_statuses(ic, ma->id);
+		func(ic, ma->id);
 	} else {
 		mastodon_log(ic, "Couldn't find a matching account.");
 	}
@@ -2381,12 +2403,41 @@ finish:
 }
 
 /**
+ * Callback to display the timeline for a unknown user. We got the
+ * account data back and now we just take the first user and display
+ * their timeline.
+ */
+void mastodon_http_unknown_account_statuses(struct http_request *req)
+{
+	mastodon_chained_account(req, mastodon_account_statuses);
+}
+
+/**
  * Show the timeline of an unknown user. Thus, we first have to search
  * for them.
  */
 void mastodon_unknown_account_statuses(struct im_connection *ic, char *who)
 {
 	mastodon_with_search_account(ic, who, mastodon_http_unknown_account_statuses);
+}
+
+/**
+ * Callback to display the timeline for a unknown user. We got the
+ * account data back and now we just take the first user and display
+ * their timeline.
+ */
+void mastodon_http_unknown_account_pinned_statuses(struct http_request *req)
+{
+	mastodon_chained_account(req, mastodon_account_pinned_statuses);
+}
+
+/**
+ * Show the timeline of an unknown user. Thus, we first have to search
+ * for them.
+ */
+void mastodon_unknown_account_pinned_statuses(struct im_connection *ic, char *who)
+{
+	mastodon_with_search_account(ic, who, mastodon_http_unknown_account_pinned_statuses);
 }
 
 /**
