@@ -671,7 +671,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 					if (time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
 						in_reply_to = mud->last_id;
 						// We're always replying to at least one person.
-						m = mastodon_string_join(mentions, who);
+						m = mastodon_string_join(mud->mentions, who);
 
 						if (!spoiler_text) { // no CW, standard logic
 							if (text) {
