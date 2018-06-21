@@ -50,10 +50,10 @@ Use **help** to learn more about these options.
 
 Without a name set, Mastodon accounts will use host URL and acccount name to create a channel name. This results in a long channel name and if you prefer a shorter channel name, use this setting (when the account is offline) to change it.
 
-> **\<kensanata\>** account mastodon offline  
-> **\<kensanata\>** account mastodon set name masto  
-> **\<kensanata\>** account mastodon online  
-> **\<kensanata\>** save  
+> **&lt;kensanata&gt;** account mastodon offline  
+> **&lt;kensanata&gt;** account mastodon set name masto  
+> **&lt;kensanata&gt;** account mastodon online  
+> **&lt;kensanata&gt;** save  
 
 ## set hide_sensitive
 > **Type:** boolean  
@@ -63,27 +63,27 @@ Without a name set, Mastodon accounts will use host URL and acccount name to cre
 
 By default, sensitive content (content behind a content warning) is simply shown. The content warning is printed, and then the sensitive content is printed.
 
-> **\<somebody\>** [27] [CW: this is the warning] \*NSFW\* this is the text  
+> **&lt;somebody&gt;** [27] [CW: this is the warning] \*NSFW\* this is the text  
 
-If you set this variable, sensitive content is not printed. Instead, you'll see "[hidden: \<the URL\>]". If you still want to read it, visit the URL.
+If you set this variable, sensitive content is not printed. Instead, you'll see "[hidden: &lt;the URL&gt;]". If you still want to read it, visit the URL.
 
-> **\<kensanata\>** account mastodon set hide_sensitive true  
-> **\<kensanata\>** save  
+> **&lt;kensanata&gt;** account mastodon set hide_sensitive true  
+> **&lt;kensanata&gt;** save  
 
 Don't forget to save your settings.
 
 The result:
 
-> **\<somebody\>** [27] [CW: this is the warning] \*NSFW\* [hidden: https://social.nasqueron.org/@kensanata/100133795756949791]  
+> **&lt;somebody&gt;** [27] [CW: this is the warning] \*NSFW\* [hidden: https://social.nasqueron.org/@kensanata/100133795756949791]  
 
 Additionally, when using **rot13**:
 
-> **\<somebody\>** [27] [CW: this is the warning] \*NSFW\* guvf vf gur grkg  
+> **&lt;somebody&gt;** [27] [CW: this is the warning] \*NSFW\* guvf vf gur grkg  
 
 And when using **advanced_rot13**:
 
-> **\<somebody\>** [27] [CW: this is the warning] \*NSFW\*   
-> **\<somebody\>** CW1 guvf vf gur grkg  
+> **&lt;somebody&gt;** [27] [CW: this is the warning] \*NSFW\*   
+> **&lt;somebody&gt;** CW1 guvf vf gur grkg  
 
 All sensitive content is also marked as Not Safe For Work (NSFW) and flagged as such. You can change the text using an option, see **help set sensitive_flag**).
 
@@ -95,7 +95,7 @@ All sensitive content is also marked as Not Safe For Work (NSFW) and flagged as 
 This is the text to flag sensitive content with. The default is Not Safe For Work (NSFW). If you wanted to simply use red for the sensitive content, you could use "^C5", for example. Be sure to use an actual Control-C, here. This might be challenging to enter, depending on your IRC client. Sadly, that's how it goes. For more information, see https://www.mirc.com/colors.html.
 
 ## account add mastodon
-> **Syntax:** account add mastodon \<handle\>  
+> **Syntax:** account add mastodon &lt;handle&gt;  
 
 By default all the Mastodon accounts you are following will appear in a new channel named after your Mastodon instance. You can change this behaviour using the **mode** setting (see **help set mode**).
 
@@ -110,31 +110,31 @@ In this section, we'll sign in as **@kensanata@mastodon.weaponvsac.space**. This
 
 In your **&bitlbee** channel, add a new account, change it's **base_url** to point at your instance, and switch it on:
 
-> **\<kensanata\>** account add mastodon @kensanata  
-> **\<root\>** Account successfully added with tag mastodon  
-> **\<kensanata\>** account mastodon set base_url https://mastodon.weaponvsac.space/api/v1  
-> **\<root\>** base_url = `https://mastodon.weaponvsac.space/api/v1'  
-> **\<kensanata\>** account mastodon on  
-> **\<root\>** mastodon - Logging in: Login  
-> **\<root\>** mastodon - Logging in: Parsing application registration response  
-> **\<root\>** mastodon - Logging in: Starting OAuth authentication  
+> **&lt;kensanata&gt;** account add mastodon @kensanata  
+> **&lt;root&gt;** Account successfully added with tag mastodon  
+> **&lt;kensanata&gt;** account mastodon set base_url https://mastodon.weaponvsac.space/api/v1  
+> **&lt;root&gt;** base_url = `https://mastodon.weaponvsac.space/api/v1'  
+> **&lt;kensanata&gt;** account mastodon on  
+> **&lt;root&gt;** mastodon - Logging in: Login  
+> **&lt;root&gt;** mastodon - Logging in: Parsing application registration response  
+> **&lt;root&gt;** mastodon - Logging in: Starting OAuth authentication  
 
 At this point, you'll get contacted by the user **mastodon_oauth** with a big URL that you need to visit using a browser. See *[connect2](#connect2)* for the OAuth authentication.
 
 ## connect2
 Visit the URL the **mastodon_oauth** user gave you and authenticate the client. You'll get back another very long string. Copy and paste this string:
 
-> **\<mastodon_oauth\>** Open this URL in your browser to authenticate: https://.......  
-> **\<mastodon_oauth\>** Respond to this message with the returned authorization token.  
-> **\<kensanata\>** \*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*  
+> **&lt;mastodon_oauth&gt;** Open this URL in your browser to authenticate: https://.......  
+> **&lt;mastodon_oauth&gt;** Respond to this message with the returned authorization token.  
+> **&lt;kensanata&gt;** \*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*  
 
 Once you do that, your login should complete in the **&bitlbee** channel:
 
-> **\<root\>** mastodon2 - Logging in: Requesting OAuth access token  
-> **\<root\>** mastodon2 - Logging in: Connecting  
-> **\<root\>** mastodon2 - Logging in: Verifying credentials  
-> **\<root\>** mastodon2 - Logging in: Getting home timeline  
-> **\<root\>** mastodon2 - Logging in: Logged in  
+> **&lt;root&gt;** mastodon2 - Logging in: Requesting OAuth access token  
+> **&lt;root&gt;** mastodon2 - Logging in: Connecting  
+> **&lt;root&gt;** mastodon2 - Logging in: Verifying credentials  
+> **&lt;root&gt;** mastodon2 - Logging in: Getting home timeline  
+> **&lt;root&gt;** mastodon2 - Logging in: Logged in  
 
 You should now have a channel called **#mastodon.weaponsvsac.space@localhost** where all the status updates and notifications get shown. We'll call this your **account channel**. See **help set name** to change it's name.
 
@@ -142,8 +142,8 @@ Mastodon gives BitlBee a permanent authentication token, which will be saved in 
 
 You should probably save this configuration.
 
-> **\<kensanata\>** save  
-> **\<root\>** Configuration saved  
+> **&lt;kensanata&gt;** save  
+> **&lt;root&gt;** Configuration saved  
 
 ## read
 The default **mode** setting is **chat**. This means that each Mastodon account you add will result in a new channel in your IRC client.
@@ -151,7 +151,7 @@ The default **mode** setting is **chat**. This means that each Mastodon account 
 Use **help set mode** in your Bitlbee control channel (**&bitlbee**) to read up on different modes.
 
 ## post
-The default **commands** setting is **true**. This means that anything you type is a toot unless it looks like command, in which case it is handled as such. In addition to that, you can use the **post \<message\>** command. If you set the **commands** setting to **strict**, using the **post** command is mandatory.
+The default **commands** setting is **true**. This means that anything you type is a toot unless it looks like command, in which case it is handled as such. In addition to that, you can use the **post &lt;message&gt;** command. If you set the **commands** setting to **strict**, using the **post** command is mandatory.
 
 Use **help set commands** in your Bitlbee control channel (**&bitlbee**) to read up on the various commands.
 
@@ -162,85 +162,85 @@ Note also that Bitlbee itself does word-wrapping to limit messages to 425 charac
 ## undo
 Use **undo** and **redo** to undo and redo recent commands. Bitlbee will remember your last 10 Mastodon commands and allows you to undo and redo them.
 
-Use **history** to see the list of commands you can undo. There is a pointer (**\>**) showing the current position.
+Use **history** to see the list of commands you can undo. There is a pointer (**&gt;**) showing the current position.
 
 Use **history undo** if you are interested in seeing the commands that will be used to undo what you just did.
 
 ## favourite
-Use **fav \<id|nick\>** to favour a status or the last status by a nick. Synonyms: **favourite**, **favorite**, **like**.
+Use **fav &lt;id|nick&gt;** to favour a status or the last status by a nick. Synonyms: **favourite**, **favorite**, **like**.
 
-Use **unfav \<id|nick\>** to unfavour a status or the last status by a nick. Synonyms: **unfavourite**, **unfavorite**, **unlike**, **dislike**.
+Use **unfav &lt;id|nick&gt;** to unfavour a status or the last status by a nick. Synonyms: **unfavourite**, **unfavorite**, **unlike**, **dislike**.
 
 ## context
-Use **context \<id|nick\>** to show some context for a status or the last status by a nick. This will display the ancestors and descendants of a status.
+Use **context &lt;id|nick&gt;** to show some context for a status or the last status by a nick. This will display the ancestors and descendants of a status.
 
-Use **timeline \<nick\>** to show the most recent messages by a nick.
+Use **timeline &lt;nick&gt;** to show the most recent messages by a nick.
 
 ## reply
 If you use the default IRC conventions of starting a message with a nickname and a colon (**:**) or a comma (**,**), then your message will be treated as a reply to that nick's last message. As is custom, the recipient and all the people they mentioned in their toot will get mentioned in your reply.
 
 This only works if that nick's last message was sent within the last 3h. For more information about this time window use **help set auto_reply_timeout** in your Bitlbee control channel (**&bitlbee**).
 
-You can also reply to an earlier message by referring to its id using the **reply \<id\> \<message\>** command. Again, the recipient and all the people they mentioned in their toot will get mentioned in your reply.
+You can also reply to an earlier message by referring to its id using the **reply &lt;id&gt; &lt;message&gt;** command. Again, the recipient and all the people they mentioned in their toot will get mentioned in your reply.
 
 If you set the **commands** setting to **strict**, using the **reply** command is mandatory.
 
 ## delete
-Use **del \<id\>** to delete a status or your last status. Synonym: **delete**.
+Use **del &lt;id&gt;** to delete a status or your last status. Synonym: **delete**.
 
 ## favourite
-Use **fav \<id|nick\>** to favour a status or the last status by a nick. Synonyms: **favourite**, **favorite**, **like**.
+Use **fav &lt;id|nick&gt;** to favour a status or the last status by a nick. Synonyms: **favourite**, **favorite**, **like**.
 
-Use **unfav \<id|nick\>** to unfavour a status or the last status by a nick. Synonyms: **unfavourite**, **unfavorite**, **unlike**, **dislike**.
+Use **unfav &lt;id|nick&gt;** to unfavour a status or the last status by a nick. Synonyms: **unfavourite**, **unfavorite**, **unlike**, **dislike**.
 
 ## follow
-Use **follow \<nick|account\>** to follow somebody. This determines the nicks in your channel. Verify the list using **/names**.
+Use **follow &lt;nick|account&gt;** to follow somebody. This determines the nicks in your channel. Verify the list using **/names**.
 
 Usually you'll be providing a local or remote account to follow. In the background, Bitlbee will run a search for the account you provided and follow the first match. Sometimes there will be nicks in the channel which you are not following, e.g. a nick is automatically added to the channel when a status of theirs mentioning you is shown.
 
-Use **unfollow \<nick\>** to unfollow a nick. Synonyms: **allow**.
+Use **unfollow &lt;nick&gt;** to unfollow a nick. Synonyms: **allow**.
 
 ## block
-Use **block \<nick\>** to block a nick on the server. This is independent of your IRC client's **/ignore** command, if available.
+Use **block &lt;nick&gt;** to block a nick on the server. This is independent of your IRC client's **/ignore** command, if available.
 
-Use **unblock \<nick\>** to unblock a nick.
+Use **unblock &lt;nick&gt;** to unblock a nick.
 
 ## mute
-Use **mute user \<nick\>** to mute a nick on the server.
+Use **mute user &lt;nick&gt;** to mute a nick on the server.
 
-Use **unmute user \<nick\>** to unmute a nick.
+Use **unmute user &lt;nick&gt;** to unmute a nick.
 
-Use **mute \<id|nick\>** to mute the conversation based on a status or the last status by a nick. Muting a status will prevent replies to it, favourites and replies of it from appearing.
+Use **mute &lt;id|nick&gt;** to mute the conversation based on a status or the last status by a nick. Muting a status will prevent replies to it, favourites and replies of it from appearing.
 
-Use **unmute \<id|nick\>** to unmute the conversation based on a status or the last status by a nick.
+Use **unmute &lt;id|nick&gt;** to unmute the conversation based on a status or the last status by a nick.
 
 ## boost
-Use **boost \<id|nick\>** to boost a status or the last status by a nick.
+Use **boost &lt;id|nick&gt;** to boost a status or the last status by a nick.
 
-Use **unboost \<id|nick\>** to unboost a status or the last status by a nick.
+Use **unboost &lt;id|nick&gt;** to unboost a status or the last status by a nick.
 
 ## more
-Use **url \<id|nick\>** to get the URL to a status or the last status by a nick.
+Use **url &lt;id|nick&gt;** to get the URL to a status or the last status by a nick.
 
-Use **whois \<id|nick\>** to show handle and full name by a nick, or of all the nicks mentioned in a status.
+Use **whois &lt;id|nick&gt;** to show handle and full name by a nick, or of all the nicks mentioned in a status.
 
-Use **pinned \<nick\>** to show the pinned statuses of a nick.
+Use **pinned &lt;nick&gt;** to show the pinned statuses of a nick.
 
 Use **info instance** to get debug information about your instance.
 
-Use **info user \<nick|account\>** to get debug information about an account.
+Use **info user &lt;nick|account&gt;** to get debug information about an account.
 
-Use **info relation \<nick|account\>** to get debug information about the relation to an account.
+Use **info relation &lt;nick|account&gt;** to get debug information about the relation to an account.
 
-Use **info \<id|nick\>** to get debug information about a status or the last status by a nick.
+Use **info &lt;id|nick&gt;** to get debug information about a status or the last status by a nick.
 
 ## search
 Mastodon allows you to search for three kinds of things: accounts, hashtags, and the URLs of a status.
 
-Use **search \<what\>** to get debug information about the things found by a search.
+Use **search &lt;what&gt;** to get debug information about the things found by a search.
 
 ## spam
-Use **report \<id|nick\> \<comment\>** to report a status or the last status by a nick. Synonyms:**spam**.
+Use **report &lt;id|nick&gt; &lt;comment&gt;** to report a status or the last status by a nick. Synonyms:**spam**.
 
 Note that the comment is mandatory. Explain why the status is being reported. The administrator of your instance will see this report and decide what to do about it, if anything.
 
@@ -254,9 +254,9 @@ This also happens from the control channel, **&bitlbee**.
 
 Here's how to subscribe to **#hashtag** for the account **mastodon**. The **chat add** command takes the parameters **account**, **hashtag**, and **channel name**. In the example we're simply giving the channel the same name. You can name the channel whatever you want. The important part is that the channel **topic** must be the hashtag it is subscribing to.
 
-> **\<kensanata\>** chat add mastodon hashtag #hashtag  
-> **\<kensanata\>** channel #hashtag set auto_join true  
-> **\<kensanata\>** /join #hashtag  
+> **&lt;kensanata&gt;** chat add mastodon hashtag #hashtag  
+> **&lt;kensanata&gt;** channel #hashtag set auto_join true  
+> **&lt;kensanata&gt;** /join #hashtag  
 
 Don't forget to **save** your config.
 
@@ -267,15 +267,15 @@ This also happens from the control channel, **&bitlbee**.
 
 Here's how to subscribe to the **local** or **federated** timeline for the account **mastodon**. The **chat add** command takes the parameters **account**, **timeline**, and **channel name**. In the example we're giving the channel a similar name. You can name the channel whatever you want. The important part is that the channel **topic** must be the name of the timeline it is subscribing to.
 
-> **\<kensanata\>** chat add mastodon local #local  
-> **\<kensanata\>** channel #local set auto_join true  
-> **\<kensanata\>** /join #local  
+> **&lt;kensanata&gt;** chat add mastodon local #local  
+> **&lt;kensanata&gt;** channel #local set auto_join true  
+> **&lt;kensanata&gt;** /join #local  
 
 Or:
 
-> **\<kensanata\>** chat add mastodon federated #federated  
-> **\<kensanata\>** channel #federated set auto_join true  
-> **\<kensanata\>** /join #federated  
+> **&lt;kensanata&gt;** chat add mastodon federated #federated  
+> **&lt;kensanata&gt;** channel #federated set auto_join true  
+> **&lt;kensanata&gt;** /join #federated  
 
 Don't forget to **save** your config.
 
