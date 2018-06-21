@@ -2085,22 +2085,22 @@ void mastodon_status_show_url(struct im_connection *ic, guint64 id)
 }
 
 /**
- * Append a string data to a gstring user_data, separated with a comma, if necessary. This is to be used with
+ * Append a string data to a gstring user_data, separated with a space, if necessary. This is to be used with
  * g_list_foreach(). The prefix "@" is added in front of every element.
  */
 static void mastodon_string_append(gchar *data, GString *user_data)
 {
 	if (user_data->len > 0) {
-		g_string_append(user_data, ", ");
+		g_string_append(user_data, " ");
 	}
 	g_string_append(user_data, "@");
 	g_string_append(user_data, data);
 }
 
 /**
- * Join all the strings in a list, comma-separated. Be sure to free the returned GString with g_string_free(). If there
+ * Join all the strings in a list, space-separated. Be sure to free the returned GString with g_string_free(). If there
  * is no initial element for the list, use NULL for the second argument. The prefix "@" is added in front of every
- * element. It is added to the initial element, too!
+ * element. It is added to the initial element, too! This is used to generated a list of accounts to mention in a toot.
  */
 GString *mastodon_string_join(GSList *l, gchar *init)
 {
