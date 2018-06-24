@@ -89,6 +89,20 @@ again.
 Debugging
 ---------
 
+Before debugging Bitlbee, you probably need to stop the system from
+running Bitlbee. I'm still unsure of how to do it.
+
+```
+sudo killall bitlbee
+```
+
+Usually my system will restart Bitlbee after a bit, though. So I'll
+try some of the following:
+
+```
+sudo systemctl stop bitlbee
+```
+
 You can enable extra debug output for `bitlbee-mastodon` by setting
 the `BITLBEE_DEBUG` environment variable. This will print all traffic
 it exchanges with Mastodon servers to STDOUT and there is a lot of it.
@@ -114,17 +128,62 @@ load?"), and run it using the options shown:
 touch bitlbee.conf
 sudo cp /var/lib/bitlbee/*.xml .
 gdb bitlbee
-b mastodon_string_join
+b mastodon_post_message
 y
 run -nvD -c bitlbee.conf -d .
 ```
 
-Note that perhaps you must remove the `-O2` from `CFLAGS` in the
-`Makefile` and run `make clean && make && sudo make install` again in
-order to build and install the module without any compiler
-optimisation.
-
 Then connect with an IRC client as you usually do.
+
+If you're getting error messages about the address being in use, you
+haven't managed to kill the existing Bitlbee.
+
+```
+Error: bind: Address already in use
+```
+
+Check who's listening on port 6667:
+
+```
+sudo lsof -i:6667
+```
+
+Then do what is necessary to kill it. 😈
+
+Note that perhaps you must remove the `-O2` from `CFLAGS` in the
+`src/Makefile` and run `make clean && make && sudo make install` in
+the `src` directory in order to build and install the module without
+any compiler optimisation. If you run `make` in the top directory,
+`src/Makefile` will get regenerated and you'll get your optimized code
+again.
+
+You know you're running optimized code when things seem to repeat
+themselves in strange ways:
+
+```
+(gdb) n
+594		if (!mastodon_length_check(ic, message)) {
+(gdb) 
+583	{
+(gdb) 
+594		if (!mastodon_length_check(ic, message)) {
+(gdb) 
+584		struct mastodon_data *md = ic->proto_data;
+(gdb) 
+594		if (!mastodon_length_check(ic, message)) {
+(gdb) 
+584		struct mastodon_data *md = ic->proto_data;
+(gdb) 
+594		if (!mastodon_length_check(ic, message)) {
+(gdb) 
+```
+
+Or when values can't be printed:
+
+```
+(gdb) p m->str
+value has been optimized out
+```
 
 WARNING: there *is* sensitive information in this debug output, such
 as auth tokens, your plaintext password and, obviously, your incoming
