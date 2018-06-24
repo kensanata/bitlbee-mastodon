@@ -68,14 +68,6 @@ struct mastodon_account {
 	char *acct;
 };
 
-typedef enum {
-	MV_UNKNOWN,
-	MV_PUBLIC,
-	MV_UNLISTED,
-	MV_PRIVATE,
-	MV_DIRECT,
-} mastodon_visibility_t;
-
 struct mastodon_status {
 	time_t created_at;
 	char *text;
@@ -402,6 +394,21 @@ void mastodon_strip_html(char *in)
 	strip_html(start);
 }
 
+mastodon_visibility_t mastodon_parse_visibility(char *value)
+{
+	if (g_strcasecmp(value, "public") == 0) {
+		return MV_PUBLIC;
+	} else if (g_strcasecmp(value, "unlisted") == 0) {
+		return MV_UNLISTED;
+	} else if (g_strcasecmp(value, "private") == 0) {
+		return MV_PRIVATE;
+	} else if (g_strcasecmp(value, "direct") == 0) {
+		return MV_DIRECT;
+	} else {
+		return MV_UNKNOWN;
+	}
+}
+
 /**
  * Function to fill a mastodon_status struct.
  */
@@ -441,15 +448,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 				ms->created_at = mktime_utc(&parsed);
 			}
 		} else if (strcmp("visibility", k) == 0 && v->type == json_string && *v->u.string.ptr) {
-			if (strcmp(v->u.string.ptr, "direct") == 0) {
-				ms->visibility = MV_DIRECT;
-			} else if (strcmp(v->u.string.ptr, "private") == 0) {
-				ms->visibility = MV_PRIVATE;
-			} else if (strcmp(v->u.string.ptr, "unlisted") == 0) {
-				ms->visibility = MV_UNLISTED;
-			} else if (strcmp(v->u.string.ptr, "public") == 0) {
-				ms->visibility = MV_PUBLIC;
-			}
+			ms->visibility = mastodon_parse_visibility(v->u.string.ptr);
 		} else if (strcmp("account", k) == 0 && v->type == json_object) {
 			ms->account = mastodon_xt_get_user(v);
 		} else if (strcmp("id", k) == 0) {
@@ -740,6 +739,7 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 	if (idx == -1) {
 		idx = md->log_id = (md->log_id + 1) % MASTODON_LOG_LENGTH;
 		md->log[idx].id = ms->id;
+		md->log[idx].visibility = ms->visibility;
 		g_slist_free_full(md->log[idx].mentions, g_free);
 		md->log[idx].mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) g_strdup, NULL);
 		if (g_strcasecmp(ms->account->acct, md->user) == 0) {
@@ -753,6 +753,7 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 			if (ms->id > mud->last_id) {
 				mud->last_id = ms->id;
 				mud->last_time = ms->created_at;
+				mud->last_visibility = ms->visibility;
 				g_slist_free_full(mud->mentions, g_free);
 				mud->mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) g_strdup, NULL);
 			}
@@ -1679,15 +1680,32 @@ static void mastodon_http_log_all(struct http_request *req)
 	json_value_free(parsed);
 }
 
+static char *mastodon_visibility(mastodon_visibility_t visibility)
+{
+	switch (visibility) {
+	case MV_UNKNOWN:
+	case MV_PUBLIC:
+		return "public";
+	case MV_UNLISTED:
+		return "unlisted";
+	case MV_PRIVATE:
+		return "private";
+	case MV_DIRECT:
+		return "direct";
+	}
+	g_assert(FALSE); // should not happen
+	return NULL;
+}
+
 /**
  * Function to POST a new status to mastodon. We don't support the
  * visibility levels "private" and "unlisted".
  */
-void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean direct, char *spoiler_text)
+void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, mastodon_visibility_t visibility, char *spoiler_text)
 {
 	char *args[8] = {
 		"status", msg,
-		"visibility", direct ? "direct" : "public",
+		"visibility", mastodon_visibility(visibility),
 		"spoiler_text", spoiler_text,
 		"in_reply_to_id", g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};

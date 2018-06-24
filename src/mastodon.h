@@ -57,6 +57,18 @@ typedef enum {
 } mastodon_message_t;
 
 /**
+ * Visibility of a status. MV_UNKNOWN mean that we will use the default visibility when posting.
+ * Higher has precedence!
+ */
+typedef enum {
+	MV_UNKNOWN,
+	MV_PUBLIC,
+	MV_UNLISTED,
+	MV_PRIVATE,
+	MV_DIRECT,
+} mastodon_visibility_t;
+
+/**
  * These are the various ways a command can influence the undo/redo
  * queue.
  */
@@ -131,6 +143,7 @@ struct mastodon_user_data {
 	guint64 account_id;
 	guint64 last_id;
 	time_t last_time;
+	mastodon_visibility_t last_visibility;
 	GSList *mentions;
 };
 
@@ -141,6 +154,7 @@ struct mastodon_log_data {
 	/* DANGER: bu can be a dead pointer. Check it first.
 	 * mastodon_message_id_from_command_arg() will do this. */
 	struct bee_user *bu;
+	mastodon_visibility_t visibility;
 	GSList *mentions;
 };
 

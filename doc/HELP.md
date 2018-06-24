@@ -40,6 +40,7 @@ These settings will affect Mastodon accounts:
 * **set name** - the name for your account channel
 * **set hide_sensitive** - hide content marked as sensitive
 * **set sensitive_flag** - text to flag sensitive content with
+* **set visibility** - default post privacy
 
 Use **help** to learn more about these options.
 
@@ -93,6 +94,17 @@ All sensitive content is also marked as Not Safe For Work (NSFW) and flagged as 
 > **Default:** "\*NSFW\* "  
 
 This is the text to flag sensitive content with. The default is Not Safe For Work (NSFW). If you wanted to simply use red for the sensitive content, you could use "^C5", for example. Be sure to use an actual Control-C, here. This might be challenging to enter, depending on your IRC client. Sadly, that's how it goes. For more information, see https://www.mirc.com/colors.html.
+
+## set visibility
+> **Type:** string  
+> **Scope:** account  
+> **Default:** "public"  
+
+This is the default visibility of your toots. There are three valid options: "public" (everybody can see your toots), "unlisted" (everybody can see your toots but they are not found on the public timelines), and "private" (only followers can see them). For more information see https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/User-guide.md#toot-privacy. This is used whenever you make a new post. You can override this visibility for new posts. See *[post](#post)* for more.
+
+Example:
+
+> **&lt;kensanata&gt;** private Good morning, fellow mastodonts!  
 
 ## account add mastodon
 > **Syntax:** account add mastodon &lt;handle&gt;  
@@ -155,7 +167,13 @@ The default **commands** setting is **true**. This means that anything you type 
 
 Use **help set commands** in your Bitlbee control channel (**&bitlbee**) to read up on the various commands.
 
-A well behaved Mastodon client will limit your toots to 500 characters even though the underlying protocols allow for longer messages. By default, Bitlbee does the same. Use **help set message_length** in your Bitlbee control channel (**&bitlbee**) to read up on the hairy details. Basically, some aspects of of your message will count for less: URLs, domain names for mentioned user accounts and the like. See **help set target_url_length** for more information on how URLs are counted.
+When posting like this, new posts will use the default visibility. By default, this is "public". See **help set visibility** for more. You can change the visibility of a new toot by using one of the following commands instead of **post**: **public**, **unlisted**, **private**, or **direct** (only mentioned users can see it).
+
+When mentioning people in your toots, make sure to qualify them appropriately. Example:
+
+> **&lt;somebody&gt;** I'm using @kensanata@octodon.social's Mastodon plugin for Bitlbee.  
+
+Note that a well behaved Mastodon client will limit your toots to 500 characters even though the underlying protocols allow for longer messages. By default, Bitlbee does the same. Use **help set message_length** in your Bitlbee control channel (**&bitlbee**) to read up on the hairy details. Basically, some aspects of of your message will count for less: URLs, domain names for mentioned user accounts and the like. See **help set target_url_length** for more information on how URLs are counted.
 
 Note also that Bitlbee itself does word-wrapping to limit messages to 425 characters. That is why longer messages may look like extra newlines have been introduced but if you check the status on the web, you'll see that everything is OK.
 
@@ -177,13 +195,13 @@ Use **context &lt;id|nick&gt;** to show some context for a status or the last st
 Use **timeline &lt;nick&gt;** to show the most recent messages by a nick.
 
 ## reply
-If you use the default IRC conventions of starting a message with a nickname and a colon (**:**) or a comma (**,**), then your message will be treated as a reply to that nick's last message. As is custom, the recipient and all the people they mentioned in their toot will get mentioned in your reply.
-
-This only works if that nick's last message was sent within the last 3h. For more information about this time window use **help set auto_reply_timeout** in your Bitlbee control channel (**&bitlbee**).
+If you use the default IRC conventions of starting a message with a nickname and a colon (**:**) or a comma (**,**), then your message will be treated as a reply to that nick's last message. As is custom, the recipient and all the people they mentioned in their toot will get mentioned in your reply. This only works if that nick's last message was sent within the last 3h. For more information about this time window use **help set auto_reply_timeout** in your Bitlbee control channel (**&bitlbee**).
 
 You can also reply to an earlier message by referring to its id using the **reply &lt;id&gt; &lt;message&gt;** command. Again, the recipient and all the people they mentioned in their toot will get mentioned in your reply.
 
 If you set the **commands** setting to **strict**, using the **reply** command is mandatory.
+
+When replying to a post, your reply will use the same visibility as the original toot unless your default visibility is more restricted: direct &gt; private &gt; unlisted &gt; public. See **help set visibility** for more.
 
 ## delete
 Use **del &lt;id&gt;** to delete a status or your last status. Synonym: **delete**.
