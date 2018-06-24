@@ -582,8 +582,8 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 				  char *who, mastodon_message_t type, GSList *mentions)
 {
 	struct mastodon_data *md = ic->proto_data;
+	// text and spoiler_text (the warning) only get used with CW
 	char *text = NULL;
-	// this is actually not the hidden text, but the hint
 	char *spoiler_text = NULL;
 	gboolean direct = FALSE;
 	int wlen;
@@ -669,31 +669,31 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 					struct mastodon_user_data *mud = bu->data;
 
 					if (time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
+						// this is a reply
 						in_reply_to = mud->last_id;
-						// We're always replying to at least one person.
-						m = mastodon_string_join(mud->mentions, who);
-
-						if (!spoiler_text) { // no CW, standard logic
-							if (text) {
-								s = g_strdup_printf("%s %s", m->str, text + wlen + 1); // +wlen+1 to remove "nick: " (note the space) from text
-								g_free(text);
-								text = s;
-							} else {
-								text = g_strdup_printf("%s %s", m->str, message + wlen + 1); // +wlen+1 to remove "nick: " (note the space) from message
-							}
-						} else { // has CW, let's fix it up and add mentions
-							// spoiler_text != NULL should imply text != NULL, compilers should optimize this assert out
-							g_assert(text != NULL);
-							s = g_strdup_printf("%s %s", m->str, text);
-							g_free(text);
-							text = s;
-							// memmove works with overlapping pointers (unlike memcpy), so this is safe.
-							// DO NOT USE memcpy!
-							memmove(spoiler_text, spoiler_text + wlen + 1, strlen(spoiler_text + wlen + 1) + 1); // +wlen+1 to remove "nick: " (note the space) from spoiler_text. strlen+1 to include terminating '\0'.
-						}
-
-						g_string_free(m, TRUE);
+						// We're always replying to at least one person. bu->handle is fully qualified unlike who
+						m = mastodon_string_join(mud->mentions, bu->handle);
+					} else {
+						// this is a new message but we still need to prefix the @ and use bu->handle instead of who
+						m = g_string_new("@");
+						g_string_append(m, bu->handle);
 					}
+
+					if (!spoiler_text) {
+						// no CW, standard logic
+						g_assert(text == NULL);
+						text = g_strdup_printf("%s %s", m->str, message + wlen + 1); // +wlen+1 to remove "nick: " (note the space) from message
+					} else {
+						// has CW, let's fix it up and add mentions
+						g_assert(text != NULL);
+						s = g_strdup_printf("%s %s", m->str, text);
+						g_free(text);
+						text = s;
+						// memmove works with overlapping pointers (unlike memcpy), so this is safe.
+						// DO NOT USE memcpy!
+						memmove(spoiler_text, spoiler_text + wlen + 1, strlen(spoiler_text + wlen + 1) + 1); // +wlen+1 to remove "nick: " (note the space) from spoiler_text. strlen+1 to include terminating '\0'.
+					}
+					g_string_free(m, TRUE);
 				} else if (strcmp(who, md->user) == 0) {
 
 					// Replying to myself.
