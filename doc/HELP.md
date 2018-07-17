@@ -255,9 +255,11 @@ Use **info relation &lt;nick|account&gt;** to get debug information about the re
 Use **info &lt;id|nick&gt;** to get debug information about a status or the last status by a nick.
 
 ## search
-Mastodon allows you to search for three kinds of things: accounts, hashtags, and the URLs of a status.
+Mastodon allows you to search for accounts, hashtags, and statuses you've written, boosted, favourited or were mentioned in, if your instance has this feature enabled.
 
-Use **search &lt;what&gt;** to get debug information about the things found by a search.
+Use **search &lt;what&gt;** to search for all these things.
+
+You can also search for a specific status by searching the URL of said status. This sounds strange but it will allow you to boost it, for example.
 
 ## spam
 Use **report &lt;id|nick&gt; &lt;comment&gt;** to report a status or the last status by a nick. Synonyms:**spam**.
