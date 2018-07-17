@@ -1960,6 +1960,80 @@ void mastodon_report(struct im_connection *ic, guint64 id, char *comment)
 }
 
 /**
+ * Callback for search.
+ */
+void mastodon_http_search(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		return;
+	}
+
+	json_value *v;
+	gboolean found = FALSE;
+
+	/* hashtags  */
+	if ((v = json_o_get(parsed, "hashtags")) &&
+	    (v->type == json_array) &&
+	    (v->u.array.length > 0)) {
+		found = TRUE;
+		int i;
+		for (i = 0; i < v->u.array.length; i++) {
+			json_value *s;
+			s = v->u.array.values[i];
+			if (s->type == json_string) {
+				mastodon_log(ic, "#%s", s->u.string.ptr);
+			}
+		}
+	}
+
+	/* accounts */
+	if ((v = json_o_get(parsed, "accounts")) &&
+	    (v->type == json_array) &&
+	    (v->u.array.length > 0)) {
+		found = TRUE;
+		int i;
+		for (i = 0; i < v->u.array.length; i++) {
+			json_value *a;
+			a = v->u.array.values[i];
+			if ((a->type == json_object)) {
+				mastodon_log(ic, "@%s %s",
+					     json_o_str(a, "acct"),
+					     json_o_str(a, "display_name"));
+			}
+		}
+	}
+
+	/* statuses */
+	if ((v = json_o_get(parsed, "statuses")) &&
+	    (v->type == json_array) &&
+	    (v->u.array.length > 0)) {
+		found = TRUE;
+		struct mastodon_list *ml = g_new0(struct mastodon_list, 1);
+		mastodon_xt_get_status_list(ic, v, ml);
+		GSList *l;
+		for (l = ml->list; l; l = g_slist_next(l)) {
+			struct mastodon_status *s = (struct mastodon_status *) l->data;
+			mastodon_status_show_chat(ic, s);
+		}
+		ml_free(ml);
+	}
+
+	json_value_free(parsed);
+
+	if (!found) {
+		mastodon_log(ic, "Search returned no results on this instance");
+	}
+}
+
+/**
  * Search for a status URL, account, or hashtag.
  */
 void mastodon_search(struct im_connection *ic, char *what)
@@ -1968,7 +2042,7 @@ void mastodon_search(struct im_connection *ic, char *what)
 		"q", what,
 	};
 
-	mastodon_http(ic, MASTODON_SEARCH_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
+	mastodon_http(ic, MASTODON_SEARCH_URL, mastodon_http_search, ic, HTTP_GET, args, 2);
 }
 
 /**
