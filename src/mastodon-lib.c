@@ -845,15 +845,16 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 		break;
 
 	case MT_HOME:
-		// use the default group chat, md->timeline_gc
+		// this is the default, see below
+		break;
+	}
+
+	// The default is the home timeline. If you use the timeline command, this is what happens: no separate
+	// groupchat exists.
+	if (!seen) {
 		c = mastodon_groupchat_init(ic);
 		mastodon_status_show_chat1(me, c, msg, status);
 		seen = TRUE;
-	}
-
-	// If the message was destined for a chat that has been removed, this is a bug.
-	if (!seen) {
-		imcb_log(ic, "Warning: no groupchat for this message: %s", msg);
 	}
 
 	g_free(msg);
@@ -1229,6 +1230,33 @@ static void mastodon_http_timeline(struct http_request *req, mastodon_timeline_t
 	if (parsed->type != json_array || parsed->u.array.length == 0) {
 		mastodon_log(ic, "No statuses found in this timeline.");
 		goto finish;
+	}
+
+	// remember the URL to fetch more if there is a header saying that there is more (URL in angled brackets)
+	char *header = NULL;
+	if ((header = get_rfc822_header(req->reply_headers, "Link", 0))) {
+		char *url = NULL;
+		gboolean next = FALSE;
+		int i;
+		for (i = 0; header[i]; i++) {
+			if (header[i] == '<') {
+				url = header + i + 1;
+			} else if (url && header[i] == '>') {
+				header[i] = 0;
+				if (strncmp(header + i + 1, "; rel=\"next\"", 12) == 0) {
+					next = TRUE;
+					break;
+				} else {
+					url = NULL;
+				}
+			}
+		}
+
+		struct mastodon_data *md = ic->proto_data;
+		g_free(md->next_url); md->next_url = NULL;
+		if (next) md->next_url = g_strdup(url);
+
+		g_free(header);
 	}
 
 	// Show in reverse order!
@@ -2462,13 +2490,53 @@ finish:
 }
 
 /**
- * Callback for a reponse containing one or more statuses which are to
- * be shown, usually the result of looking at the statuses of an
- * account.
+ * Callback for a reponse containing one or more statuses which are to be shown, usually the result of looking at the
+ * statuses of an account.
  */
 void mastodon_http_statuses(struct http_request *req)
 {
 	mastodon_http_timeline(req, MT_HOME);
+}
+
+/**
+ * Given a command that showed a bunch of statuses, which will have used mastodon_http_timeline as a callback, and which
+ * will therefore have set md->next_url, we can use now use this URL to request more statuses.
+ */
+void mastodon_more(struct im_connection *ic)
+{
+	struct mastodon_data *md = ic->proto_data;
+
+	if (!md->next_url) {
+		mastodon_log(ic, "Next URL is not set. This shouldn't happen, as they say!?");
+		return;
+	}
+
+	char *url = g_strdup(md->next_url);
+	char *s = NULL;
+	int len = 0;
+	int i;
+
+	for (i = 0; url[i]; i++) {
+		if (url[i] == '?') {
+			url[i] = 0;
+			s = url + i + 1;
+			len = 1;
+		} else if (s && url[i] == '&') {
+			url[i] = '='; // for later splitting
+			len++;
+		}
+	}
+
+	gchar **args = NULL;
+
+	if (s) {
+		args = g_strsplit (s, "=", -1);
+	}
+
+	mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, args, len);
+
+	g_strfreev(args);
+	g_free(url);
 }
 
 /**
@@ -2494,6 +2562,7 @@ void mastodon_account_pinned_statuses(struct im_connection *ic, guint64 id)
 	mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, args, 2);
 	g_free(url);
 }
+
 /**
  * Callback to display the timeline for a unknown user. We got the account data back and now we just take the first user
  * and display their timeline.

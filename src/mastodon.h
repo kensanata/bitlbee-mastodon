@@ -126,6 +126,9 @@ struct mastodon_data {
 	int first_undo; /* index of the latest item in the undo and redo stacks */
 	int current_undo; /* index of the current item in the undo and redo stacks */
 
+	/* for the more command */
+	char *next_url;
+
 	/* set base_url */
 	gboolean url_ssl;
 	int url_port;

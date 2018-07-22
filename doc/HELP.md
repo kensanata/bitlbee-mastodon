@@ -20,8 +20,8 @@ Mastodon is a free, open-source social network server. A decentralized solution 
 * *[search](#search)* - Searching for accounts and hashtags
 * *[spam](#spam)* - Reporting a status
 * *[control](#control)* - Commands in the control channel
-* *[hashtag](#hashtag)* - Following a hashtag
-* *[public](#public)* - Following the local or federated timeline
+* *[hashtag](#hashtag)* - Showing and following a hashtag
+* *[public](#public)* - Showing and following the local or federated timeline
 * *[set](#set)* - Settings affecting Mastodon accounts
 
 ## register
@@ -192,7 +192,7 @@ Use **unfav &lt;id|nick&gt;** to unfavour a status or the last status by a nick.
 ## context
 Use **context &lt;id|nick&gt;** to show some context for a status or the last status by a nick. This will display the ancestors and descendants of a status.
 
-Use **timeline &lt;nick&gt;** to show the most recent messages by a nick.
+Use **timeline &lt;nick&gt;** to show the most recent messages by a nick. Use **more** to show more statuses from the same command.
 
 ## reply
 If you use the default IRC conventions of starting a message with a nickname and a colon (**:**) or a comma (**,**), then your message will be treated as a reply to that nick's last message. As is custom, the recipient and all the people they mentioned in their toot will get mentioned in your reply. This only works if that nick's last message was sent within the last 3h. For more information about this time window use **help set auto_reply_timeout** in your Bitlbee control channel (**&bitlbee**).
@@ -272,7 +272,9 @@ As we said at the beginning, the default **mode** setting is **chat**. This mean
 There are some standard root commands that only work in the control channel, **&bitlbee**.
 
 ## hashtag
-This also happens from the control channel, **&bitlbee**.
+Use **timeline #&lt;hashtag&gt;** to show the most recent messages for a hashtag. Use **more** to show more statuses from the same command.
+
+If you want to follow a hashtag, you need to use the control channel, **&bitlbee**.
 
 Here's how to subscribe to **#hashtag** for the account **mastodon**. The **chat add** command takes the parameters **account**, **hashtag**, and **channel name**. In the example we're simply giving the channel the same name. You can name the channel whatever you want. The important part is that the channel **topic** must be the hashtag it is subscribing to.
 
@@ -285,7 +287,9 @@ Don't forget to **save** your config.
 Note that where as you can still issue commands in these hashtag channels, the output is going to appear in the original **account channel**.
 
 ## public
-This also happens from the control channel, **&bitlbee**.
+Use **timeline local** to show the most recent messages for the local timeline (these are statuses from accounts on your instance). Use **timeline federated** to show the most recent messages for the federated timeline (these are statuses from the local accounts and anybody they are following). Use **more** to show more statuses from the same command.
+
+If you want to follow a hashtag, you need to use the control channel, **&bitlbee**.
 
 Here's how to subscribe to the **local** or **federated** timeline for the account **mastodon**. The **chat add** command takes the parameters **account**, **timeline**, and **channel name**. In the example we're giving the channel a similar name. You can name the channel whatever you want. The important part is that the channel **topic** must be the name of the timeline it is subscribing to.
 

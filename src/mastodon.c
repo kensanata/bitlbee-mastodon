@@ -494,6 +494,7 @@ static void mastodon_logout(struct im_connection *ic)
 		os_free(md->oauth2_service); md->oauth2_service = NULL;
 		g_free(md->user); md->user = NULL;
 		g_free(md->name); md->name = NULL;
+		g_free(md->next_url); md->next_url = NULL;
 		g_free(md->url_host); md->url_host = NULL;
 		g_free(md->url_path); md->url_path = NULL;
 		g_free(md);
@@ -1410,6 +1411,12 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			mastodon_account_bio(ic, id);
 		} else {
 			mastodon_unknown_account_bio(ic, cmd[1]);
+		}
+	} else if (g_strcasecmp(cmd[0], "more") == 0) {
+		if (md->next_url) {
+			mastodon_more(ic);
+		} else {
+			mastodon_log(ic, "More of what? Use the timeline command, first.");
 		}
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
 		GSList *mentions = NULL;
