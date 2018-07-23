@@ -1316,6 +1316,14 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
 			mastodon_post(ic, MASTODON_STATUS_UNFAVOURITE_URL, MC_UNFAVOURITE, id);
 		}
+	} else if (g_strcasecmp(cmd[0], "pin") == 0 && cmd[1]) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+			mastodon_post(ic, MASTODON_STATUS_PIN_URL, MC_PIN, id);
+		}
+	} else if (g_strcasecmp(cmd[0], "unpin") == 0 && cmd[1]) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+			mastodon_post(ic, MASTODON_STATUS_UNPIN_URL, MC_UNPIN, id);
+		}
 	} else if (g_strcasecmp(cmd[0], "follow") == 0 && cmd[1]) {
 		mastodon_add_buddy(ic, cmd[1], NULL);
 	} else if (g_strcasecmp(cmd[0], "unfollow") == 0 && cmd[1]) {

@@ -1520,6 +1520,8 @@ static void mastodon_http_callback(struct http_request *req)
 	case MC_UNBLOCK:
 	case MC_FAVOURITE:
 	case MC_UNFAVOURITE:
+	case MC_PIN:
+	case MC_UNPIN:
 	case MC_ACCOUNT_MUTE:
 	case MC_ACCOUNT_UNMUTE:
 	case MC_STATUS_MUTE:
@@ -1804,7 +1806,15 @@ void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type
 			break;
 		case MC_UNFAVOURITE:
 			mc->redo = g_strdup_printf("unfavourite %" G_GUINT64_FORMAT, id);
-			mc->undo = g_strdup_printf("favorite %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("favourite %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_PIN:
+			mc->redo = g_strdup_printf("pin %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("unpin %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_UNPIN:
+			mc->redo = g_strdup_printf("unpin %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("pin %" G_GUINT64_FORMAT, id);
 			break;
 		case MC_ACCOUNT_MUTE:
 			mc->redo = g_strdup_printf("mute user %" G_GUINT64_FORMAT, id);

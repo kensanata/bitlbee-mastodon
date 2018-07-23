@@ -56,6 +56,8 @@
 #define MASTODON_STATUS_UNMUTE_URL "/statuses/%" G_GINT64_FORMAT "/unmute"
 #define MASTODON_STATUS_FAVOURITE_URL "/statuses/%" G_GINT64_FORMAT "/favourite"
 #define MASTODON_STATUS_UNFAVOURITE_URL "/statuses/%" G_GINT64_FORMAT "/unfavourite"
+#define MASTODON_STATUS_PIN_URL "/statuses/%" G_GINT64_FORMAT "/pin"
+#define MASTODON_STATUS_UNPIN_URL "/statuses/%" G_GINT64_FORMAT "/unpin"
 #define MASTODON_STATUS_CONTEXT_URL "/statuses/%" G_GINT64_FORMAT "/context"
 
 #define MASTODON_ACCOUNT_URL "/accounts/%" G_GINT64_FORMAT

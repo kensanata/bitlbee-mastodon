@@ -244,7 +244,7 @@ Use **whois &lt;id|nick&gt;** to show handle and full name by a nick, or of all 
 
 Use **bio &lt;nick&gt;** to show the bio of a nick.
 
-Use **pinned &lt;nick&gt;** to show the pinned statuses of a nick.
+Use **pinned &lt;nick&gt;** to show the pinned statuses of a nick. Use **pin &lt;id&gt;** to pin a status to your profile and use use **unpin &lt;id&gt;** to unpin a status from your profile.
 
 Use **info instance** to get debug information about your instance.
 
