@@ -2972,7 +2972,7 @@ static void mastodon_http_register_app(struct http_request *req)
 void mastodon_register_app(struct im_connection *ic)
 {
 	char *args[8] = {
-		"client_name", "bitblee",
+		"client_name", "bitlbee",
 		"redirect_uris", "urn:ietf:wg:oauth:2.0:oob",
 		"scopes", "read write follow",
 		"website", "https://www.bitlbee.org/"
