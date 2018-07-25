@@ -1211,26 +1211,11 @@ struct http_request *mastodon_open_federated_stream(struct im_connection *ic)
 }
 
 /**
- * Handle a request whose response contains nothing but statuses.
+ * Look for the Link header and remember the URL to the next page of results. This will be used by the "more" command.
  */
-static void mastodon_http_timeline(struct http_request *req, mastodon_timeline_type_t subscription)
+static void mastodon_handle_header(struct http_request *req, mastodon_more_t more_type)
 {
 	struct im_connection *ic = req->data;
-	if (!g_slist_find(mastodon_connections, ic)) {
-		return;
-	}
-
-	json_value *parsed;
-	if (!(parsed = mastodon_parse_response(ic, req))) {
-		/* ic would have been freed in imc_logout in this situation */
-		ic = NULL;
-		return;
-	}
-
-	if (parsed->type != json_array || parsed->u.array.length == 0) {
-		mastodon_log(ic, "No statuses found in this timeline.");
-		goto finish;
-	}
 
 	// remember the URL to fetch more if there is a header saying that there is more (URL in angled brackets)
 	char *header = NULL;
@@ -1255,18 +1240,46 @@ static void mastodon_http_timeline(struct http_request *req, mastodon_timeline_t
 		struct mastodon_data *md = ic->proto_data;
 		g_free(md->next_url); md->next_url = NULL;
 		if (next) md->next_url = g_strdup(url);
+		md->more_type = more_type;
 
 		g_free(header);
 	}
+}
+
+/**
+ * Handle a request whose response contains nothing but statuses.
+ */
+static void mastodon_http_timeline(struct http_request *req, mastodon_timeline_type_t subscription)
+{
+	struct im_connection *ic = req->data;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		return;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "No statuses found in this timeline.");
+		goto finish;
+	}
+
+	mastodon_handle_header(req, MASTODON_MORE_STATUSES);
 
 	// Show in reverse order!
 	int i;
 	for (i = parsed->u.array.length - 1; i >= 0 ; i--) {
 		json_value *node = parsed->u.array.values[i];
 		struct mastodon_status *ms = mastodon_xt_get_status(node, ic);
-		ms->subscription = subscription;
-		mastodon_status_show(ic, ms);
-		ms_free(ms);
+		if (ms) {
+			ms->subscription = subscription;
+			mastodon_status_show(ic, ms);
+			ms_free(ms);
+		}
 	}
 finish:
 	json_value_free(parsed);
@@ -1426,6 +1439,9 @@ static void mastodon_http_get_notifications(struct http_request *req)
 	mastodon_flush_timeline(ic);
 }
 
+/**
+ * See mastodon_initial_timeline.
+ */
 static void mastodon_get_home_timeline(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
@@ -1437,6 +1453,9 @@ static void mastodon_get_home_timeline(struct im_connection *ic)
 	mastodon_http(ic, MASTODON_HOME_TIMELINE_URL, mastodon_http_get_home_timeline, ic, HTTP_GET, NULL, 0);
 }
 
+/**
+ * See mastodon_initial_timeline.
+ */
 static void mastodon_get_notifications(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
@@ -1465,6 +1484,54 @@ void mastodon_initial_timeline(struct im_connection *ic)
 	mastodon_get_home_timeline(ic);
 	mastodon_get_notifications(ic);
 	return;
+}
+
+/**
+ * Callback for getting notifications manually.
+ */
+static void mastodon_http_notifications(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		return;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "No notifications found.");
+		goto finish;
+	}
+
+	mastodon_handle_header(req, MASTODON_MORE_NOTIFICATIONS);
+
+	// Show in reverse order!
+	int i;
+	for (i = parsed->u.array.length - 1; i >= 0 ; i--) {
+		json_value *node = parsed->u.array.values[i];
+		struct mastodon_notification *mn = mastodon_xt_get_notification(node, ic);
+		if (mn) {
+			mastodon_notification_show(ic, mn);
+			mn_free(mn);
+		}
+	}
+finish:
+	json_value_free(parsed);
+}
+
+/**
+ * Notifications are usually shown by the Streaming API, and when showing the initial timeline after connecting. In
+ * order to allow manual review (and going through past notifications using the more command, we need yet another way to
+ * get notifications.
+ */
+void mastodon_notifications(struct im_connection *ic)
+{
+	mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_notifications, ic, HTTP_GET, NULL, 0);
 }
 
 /**
@@ -2543,7 +2610,14 @@ void mastodon_more(struct im_connection *ic)
 		args = g_strsplit (s, "=", -1);
 	}
 
-	mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, args, len);
+	switch(md->more_type) {
+	case MASTODON_MORE_STATUSES:
+		mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, args, len);
+		break;
+	case MASTODON_MORE_NOTIFICATIONS:
+		mastodon_http(ic, url, mastodon_http_notifications, ic, HTTP_GET, args, len);
+		break;
+	}
 
 	g_strfreev(args);
 	g_free(url);

@@ -69,6 +69,14 @@ typedef enum {
 } mastodon_visibility_t;
 
 /**
+ * Various things that come in pages such that the "more" command needs to know about it.
+ */
+typedef enum {
+	MASTODON_MORE_STATUSES,
+	MASTODON_MORE_NOTIFICATIONS,
+} mastodon_more_t;
+
+/**
  * These are the various ways a command can influence the undo/redo
  * queue.
  */
@@ -130,6 +138,7 @@ struct mastodon_data {
 
 	/* for the more command */
 	char *next_url;
+	mastodon_more_t more_type;
 
 	/* set base_url */
 	gboolean url_ssl;

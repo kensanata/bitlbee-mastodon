@@ -82,6 +82,7 @@ typedef enum {
 
 void mastodon_register_app(struct im_connection *ic);
 void mastodon_verify_credentials(struct im_connection *ic);
+void mastodon_notifications(struct im_connection *ic);
 void mastodon_initial_timeline(struct im_connection *ic);
 void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag);
 void mastodon_local_timeline(struct im_connection *ic);

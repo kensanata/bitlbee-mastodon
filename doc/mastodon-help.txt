@@ -20,6 +20,7 @@ Mastodon is a free, open-source social network server. A decentralized solution 
  help mcontrol - Commands in the control channel
  help mhashtag - Showing and following a hashtag
  help mpublic - Showing and following the local or federated timeline
+ help mnotifications - Showing your notifications
  help mset - Settings affecting Mastodon accounts
 %
 ?mregister
@@ -287,9 +288,7 @@ Note that where as you can still issue commands in these hashtag channels, the o
 ?mpublic
 Use timeline local to show the most recent messages for the local timeline (these are statuses from accounts on your instance). Use timeline federated to show the most recent messages for the federated timeline (these are statuses from the local accounts and anybody they are following). Use more to show more statuses from the same command.
 
-If you want to follow a hashtag, you need to use the control channel, &bitlbee.
-
-Here's how to subscribe to the local or federated timeline for the account mastodon. The chat add command takes the parameters account, timeline, and channel name. In the example we're giving the channel a similar name. You can name the channel whatever you want. The important part is that the channel topic must be the name of the timeline it is subscribing to.
+If you want to follow a hashtag or the local of feredated timeline, you need to use the control channel, &bitlbee. The following assumes that your account is called mastodon. The chat add command takes the parameters account, timeline, and channel name. In the example we're giving the channel a similar name. You can name the channel whatever you want. The important part is that the channel topic must be the name of the timeline it is subscribing to.
 
 <kensanata> chat add mastodon local #local
 <kensanata> channel #local set auto_join true
@@ -304,4 +303,7 @@ Or:
 Don't forget to save your config.
 
 Note that where as you can still issue commands in these channels, the output is going to appear in the original account channel.
+%
+?mnotifications
+Use notifications to show the most recent notifications again. Use more to show more notifications.
 %

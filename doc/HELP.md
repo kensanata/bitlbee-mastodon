@@ -22,6 +22,7 @@ Mastodon is a free, open-source social network server. A decentralized solution 
 * *[control](#control)* - Commands in the control channel
 * *[hashtag](#hashtag)* - Showing and following a hashtag
 * *[public](#public)* - Showing and following the local or federated timeline
+* *[notifications](#notifications)* - Showing your notifications
 * *[set](#set)* - Settings affecting Mastodon accounts
 
 ## register
@@ -289,9 +290,7 @@ Note that where as you can still issue commands in these hashtag channels, the o
 ## public
 Use **timeline local** to show the most recent messages for the local timeline (these are statuses from accounts on your instance). Use **timeline federated** to show the most recent messages for the federated timeline (these are statuses from the local accounts and anybody they are following). Use **more** to show more statuses from the same command.
 
-If you want to follow a hashtag, you need to use the control channel, **&bitlbee**.
-
-Here's how to subscribe to the **local** or **federated** timeline for the account **mastodon**. The **chat add** command takes the parameters **account**, **timeline**, and **channel name**. In the example we're giving the channel a similar name. You can name the channel whatever you want. The important part is that the channel **topic** must be the name of the timeline it is subscribing to.
+If you want to follow a hashtag or the local of feredated timeline, you need to use the control channel, **&bitlbee**. The following assumes that your account is called **mastodon**. The **chat add** command takes the parameters **account**, **timeline**, and **channel name**. In the example we're giving the channel a similar name. You can name the channel whatever you want. The important part is that the channel **topic** must be the name of the timeline it is subscribing to.
 
 > **&lt;kensanata&gt;** chat add mastodon local #local  
 > **&lt;kensanata&gt;** channel #local set auto_join true  
@@ -306,4 +305,7 @@ Or:
 Don't forget to **save** your config.
 
 Note that where as you can still issue commands in these channels, the output is going to appear in the original **account channel**.
+
+## notifications
+Use **notifications** to show the most recent notifications again. Use **more** to show more notifications.
 

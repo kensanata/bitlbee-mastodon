@@ -1406,6 +1406,8 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		} else {
 			mastodon_unknown_account_statuses(ic, cmd[1]);
 		}
+	} else if (g_strcasecmp(cmd[0], "notifications") == 0) {
+		mastodon_notifications(ic);
 	} else if (g_strcasecmp(cmd[0], "pinned") == 0 && cmd[1]) {
 		if ((bu = mastodon_user_by_nick(ic, cmd[1])) &&
 		    (id = mastodon_account_id(bu))) {
