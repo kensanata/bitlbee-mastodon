@@ -1795,8 +1795,7 @@ static char *mastodon_visibility(mastodon_visibility_t visibility)
 }
 
 /**
- * Function to POST a new status to mastodon. We don't support the
- * visibility levels "private" and "unlisted".
+ * Function to POST a new status to mastodon.
  */
 void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, mastodon_visibility_t visibility, char *spoiler_text)
 {
