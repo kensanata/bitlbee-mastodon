@@ -159,6 +159,7 @@ struct mastodon_user_data {
 	time_t last_time;
 	mastodon_visibility_t last_visibility;
 	GSList *mentions;
+	char *spoiler_text;
 };
 
 #define MASTODON_LOG_LENGTH 256
@@ -170,6 +171,7 @@ struct mastodon_log_data {
 	struct bee_user *bu;
 	mastodon_visibility_t visibility;
 	GSList *mentions;
+	char *spoiler_text;
 };
 
 /**

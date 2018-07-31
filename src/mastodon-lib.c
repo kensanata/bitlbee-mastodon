@@ -70,6 +70,7 @@ struct mastodon_account {
 
 struct mastodon_status {
 	time_t created_at;
+	char *spoiler_text;
 	char *text;
 	char *url;
 	struct mastodon_account *account;
@@ -150,6 +151,7 @@ static void ms_free(struct mastodon_status *ms)
 		return;
 	}
 
+	g_free(ms->spoiler_text);
 	g_free(ms->text);
 	g_free(ms->url);
 	ma_free(ms->account);
@@ -546,7 +548,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 			char *spoiler_text  = g_strdup(spoiler_value->u.string.ptr);
 			mastodon_strip_html(spoiler_text);
 			g_string_append_printf(s, "[CW: %s]", spoiler_text);
-			g_free(spoiler_text);
+			ms->spoiler_text = spoiler_text;
 			if (nsfw || !use_cw1) {
 				g_string_append(s, " ");
 			}
@@ -735,13 +737,19 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 	}
 
 	/* If we didn't find the status, it's new and needs an id, and we want to record who said it, and when they said
-	 * it, and who they mentioned. */
+	 * it, and who they mentioned, and the spoiler they used. We need to do this in two places: the md->log, and per
+	 * user in the mastodon_user_data (mud). */
 	if (idx == -1) {
 		idx = md->log_id = (md->log_id + 1) % MASTODON_LOG_LENGTH;
 		md->log[idx].id = ms->id;
+
 		md->log[idx].visibility = ms->visibility;
 		g_slist_free_full(md->log[idx].mentions, g_free);
 		md->log[idx].mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) g_strdup, NULL);
+
+		g_free(md->log[idx].spoiler_text);
+		md->log[idx].spoiler_text = g_strdup(ms->spoiler_text); // no problem if NULL
+
 		if (g_strcasecmp(ms->account->acct, md->user) == 0) {
 			/* If this is our own status, use a fake bu without data since we can't be found by handle. This
 			 * will allow us to reply to our own messages, for example. */
@@ -753,9 +761,13 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 			if (ms->id > mud->last_id) {
 				mud->last_id = ms->id;
 				mud->last_time = ms->created_at;
+
 				mud->last_visibility = ms->visibility;
 				g_slist_free_full(mud->mentions, g_free);
 				mud->mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) g_strdup, NULL);
+
+				g_free(mud->spoiler_text);
+				mud->spoiler_text = g_strdup(ms->spoiler_text); // no problem if NULL
 			}
 
 			md->log[idx].bu = bu;

@@ -487,6 +487,7 @@ static void mastodon_logout(struct im_connection *ic)
 		int i;
 		for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
 			g_slist_free_full(md->log[i].mentions, g_free); md->log[i].mentions = NULL;
+			g_free(md->log[i].spoiler_text);
 		}
 
 		g_free(md->log); md->log = NULL;
@@ -596,45 +597,14 @@ static mastodon_visibility_t mastodon_default_visibility(struct im_connection *i
  * Post a message. Make sure we get all the meta data for the status right.
  */
 static void mastodon_post_message(struct im_connection *ic, char *message, guint64 in_reply_to,
-				  char *who, mastodon_message_t type, GSList *mentions, mastodon_visibility_t visibility)
+				  char *who, mastodon_message_t type, GSList *mentions, mastodon_visibility_t visibility,
+				  char *spoiler_text)
 {
 	struct mastodon_data *md = ic->proto_data;
-	// text and spoiler_text (the warning) only get used with CW
 	char *text = NULL;
-	char *spoiler_text = NULL;
+	GString *m = NULL;
 	int wlen;
-	GString *m;
 	char *s;
-	gboolean edge_case = FALSE;
-
-	if (!mastodon_length_check(ic, message)) {
-		return;
-	}
-
-	// may have one, and only one, CW1
-	if ((s = strstr(message, "\001"))) {
-		char *s2;
-		if (s[1] != 'C' || s[2] != 'W' || s[3] != '1' || s[4] != ' ') {
-			return;
-		}
-		if ((s2 = strstr(s + 5, "\001"))) {
-			if (s2[1] != '\000') {
-				return;
-			}
-			text = g_strdup(s + 5);
-			*strstr(text, "\001") = '\0';
-			rot13(text);
-			// everything up to the hidden text is the hint
-			spoiler_text = g_strndup(message, s - message);
-		} else {
-			return;
-		}
-		// weird edge case of replying with no CW, not sure what I should be doing here.
-		if ((s = strstr(who, "\001"))) {
-			*s = '\0';
-			edge_case = TRUE;
-		}
-	}
 
 	switch (type) {
 	case MASTODON_DIRECT:
@@ -642,7 +612,6 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		// fall through
 	case MASTODON_REPLY:
 		/* Mentioning OP and other mentions is the traditional thing to do. */
-		m = NULL;
 		if (g_strcasecmp(who, md->user) == 0) {
 			/* if replying to ourselves, we still want to mention others, if any */
 			if (mentions) {
@@ -654,13 +623,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 			m = mastodon_string_join(mentions, who);
 		}
 		if (m) {
-			if (text) {
-				s = g_strdup_printf("%s %s", m->str, text);
-				g_free(text);
-				text = s;
-			} else {
-				text = g_strdup_printf("%s %s", m->str, message);
-			}
+			text = g_strdup_printf("%s %s", m->str, message);
 			g_string_free(m, TRUE);
 		}
 		break;
@@ -671,12 +634,11 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		{
 			g_assert(visibility == MV_UNKNOWN);
 			mastodon_visibility_t default_visibility = mastodon_default_visibility(ic);
-			char *may_have_nick = spoiler_text ? spoiler_text : message; // part of message which may have a "nick:" or "nick,"
 			wlen = strlen(who); // length of the first word
 
 			// If the message starts with "nick:" or "nick,"
-			if (who && wlen && strncmp(who, may_have_nick, wlen) == 0 &&
-			    (s = may_have_nick + wlen - 1) && (*s == ':' || *s == ',')) {
+			if (who && wlen && strncmp(who, message, wlen) == 0 &&
+			    (s = message + wlen - 1) && (*s == ':' || *s == ',')) {
 
 				// Trim punctuation from who.
 				who[wlen - 1] = '\0';
@@ -692,50 +654,40 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 						// We're always replying to at least one person. bu->handle is fully qualified unlike who
 						m = mastodon_string_join(mud->mentions, bu->handle);
 						visibility = mud->last_visibility;
+						// This should always be NULL for MASTODON_MAYBE_REPLY
+						if (!spoiler_text)
+							spoiler_text = mud->spoiler_text;
 					} else {
 						// this is a new message but we still need to prefix the @ and use bu->handle instead of who
 						m = g_string_new("@");
 						g_string_append(m, bu->handle);
 					}
 
-					if (!spoiler_text) {
-						// no CW, standard logic
-						g_assert(text == NULL);
-						text = g_strdup_printf("%s %s", m->str, message + wlen + 1); // +wlen+1 to remove "nick: " (note the space) from message
-					} else {
-						// has CW, let's fix it up and add mentions
-						g_assert(text != NULL);
-						s = g_strdup_printf("%s %s", m->str, text);
-						g_free(text);
-						text = s;
-						// memmove works with overlapping pointers (unlike memcpy), so this is safe.
-						// DO NOT USE memcpy!
-						memmove(spoiler_text, spoiler_text + wlen + 1, strlen(spoiler_text + wlen + 1) + 1); // +wlen+1 to remove "nick: " (note the space) from spoiler_text. strlen+1 to include terminating '\0'.
-					}
+					// use +wlen+1 to remove "nick: " (note the space) from message
+					text = g_strdup_printf("%s %s", m->str, message + wlen + 1);
 					g_string_free(m, TRUE);
+
 				} else if (strcmp(who, md->user) == 0) {
 
 					// Replying to myself.
 					in_reply_to = md->last_id;
 
+					// FIXME: add mentions (which we need to get from somewhere)
+
 					// Change "foo: bar" to "bar"
 					if (*(s + 1) == ' ') {
 						s++;
 					}
-					if (may_have_nick == message) {
-						message = s;
-					} else {
-						memmove(spoiler_text, s, strlen(s) + 1);
-						if (edge_case) {
-							g_free(spoiler_text);
-							spoiler_text = NULL;
-						}
-					}
+					message = s;
 				}
 			}
 			if (default_visibility > visibility) visibility = default_visibility;
 		}
 		break;
+	}
+
+	if (!mastodon_length_check(ic, text ? text : message)) {
+		goto finish;
 	}
 
 	/* If the user runs undo between this request and its response
@@ -744,6 +696,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 
 	mastodon_post_status(ic, text ? text : message, in_reply_to, visibility, spoiler_text);
 
+finish:
 	g_free(text);
 	g_free(spoiler_text);
 }
@@ -774,7 +727,7 @@ static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message
 	if (g_strcasecmp(who, md->name) == 0) {
 		mastodon_handle_command(ic, message, MASTODON_NEW);
 	} else {
-		mastodon_post_message(ic, message, 0, who, MASTODON_REPLY, NULL, MV_DIRECT);
+		mastodon_post_message(ic, message, 0, who, MASTODON_REPLY, NULL, MV_DIRECT, NULL);
 	}
 	return 0;
 }
@@ -871,6 +824,7 @@ static void mastodon_buddy_data_free(bee_user_t *bu)
 {
 	struct mastodon_user_data *mud = (struct mastodon_user_data*) bu->data;
 	g_slist_free_full(mud->mentions, g_free); mud->mentions = NULL;
+	g_free(mud->spoiler_text); mud->spoiler_text = NULL;
 	g_free(bu->data);
 }
 
@@ -896,10 +850,13 @@ static bee_user_t *mastodon_user_by_nick(struct im_connection *ic, char *nick)
  * Convert the given bitlbee toot ID or bitlbee username into a
  * mastodon status ID and returns it. If provided with a pointer to a
  * bee_user_t, fills that as well. Provide NULL if you don't need it.
+ * The same is true for mentions, visibility and spoiler text.
  *
  * Returns 0 if the user provides garbage.
  */
-static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, char *arg, bee_user_t **bu_, GSList **mentions_, mastodon_visibility_t *visibility_)
+static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, char *arg, bee_user_t **bu_,
+						    GSList **mentions_, mastodon_visibility_t *visibility_,
+						    char **spoiler_text_)
 {
 	struct mastodon_data *md = ic->proto_data;
 	struct mastodon_user_data *mud;
@@ -918,6 +875,7 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 			id = mud->last_id;
 			if (mentions_) *mentions_ = mud->mentions;
 			if (visibility_) *visibility_ = mud->last_visibility;
+			if (spoiler_text_) *spoiler_text_ = mud->spoiler_text;
 		}
 	} else {
 		if (arg[0] == '#') {
@@ -926,6 +884,7 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 		if (parse_int64(arg, 16, &id) && id < MASTODON_LOG_LENGTH) {
 			if (mentions_) *mentions_ = md->log[id].mentions;
 			if (visibility_) *visibility_ = md->log[id].visibility;
+			if (spoiler_text_) *spoiler_text_ = md->log[id].spoiler_text;
 			bu = md->log[id].bu;
 			id = md->log[id].id;
 		} else if (parse_int64(arg, 10, &id)) {
@@ -961,15 +920,27 @@ static void mastodon_unknown_user_warning(struct im_connection *ic, char *who)
 	mastodon_log(ic, "User '%s' is unknown.", who);
 }
 
-static guint64 mastodon_message_id_or_warn(struct im_connection *ic, char *what, bee_user_t **bu, GSList **mentions, mastodon_visibility_t *visibility)
+/**
+ * Get the message id given a nick or a status id. If possible, also set a number of other variables by reference.
+ */
+static guint64 mastodon_message_id_or_warn_and_more(struct im_connection *ic, char *what, bee_user_t **bu,
+					   GSList **mentions, mastodon_visibility_t *visibility, char **spoiler_text)
 {
-	guint64 id = mastodon_message_id_from_command_arg(ic, what, bu, mentions, visibility);
+	guint64 id = mastodon_message_id_from_command_arg(ic, what, bu, mentions, visibility, spoiler_text);
 	if (!id) {
 		mastodon_no_id_warning(ic, what);
 	} else if (bu && !*bu) {
 		mastodon_unknown_user_warning(ic, what);
 	}
 	return id;
+}
+
+/**
+ * Simple interface to mastodon_message_id_or_warn_and_more. Get the message id given a nick or a status id.
+ */
+static guint64 mastodon_message_id_or_warn(struct im_connection *ic, char *what)
+{
+	return mastodon_message_id_or_warn_and_more(ic, what, NULL, NULL, NULL, NULL);
 }
 
 static guint64 mastodon_account_id(bee_user_t *bu) {
@@ -1271,7 +1242,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			mastodon_user(ic, cmd[2]);
 		} else if (g_strcasecmp(cmd[1], "relation") == 0 && cmd[2]) {
 			mastodon_relation_to_user(ic, cmd[2]);
-		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_status(ic, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
@@ -1296,7 +1267,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		   g_strcasecmp(cmd[0], "delete") == 0) {
 		if (cmd[1] == NULL && md->last_id) {
 			mastodon_status_delete(ic, md->last_id);
-		} else if ((id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL, NULL, NULL))) {
+		} else if ((id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL, NULL, NULL, NULL))) {
 			mastodon_status_delete(ic, id);
 		} else {
 			mastodon_log(ic, "Could not delete the last post.");
@@ -1305,7 +1276,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 	            g_strcasecmp(cmd[0], "favorite") == 0 ||
 	            g_strcasecmp(cmd[0], "fav") == 0 ||
 	            g_strcasecmp(cmd[0], "like") == 0) && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_post(ic, MASTODON_STATUS_FAVOURITE_URL, MC_FAVOURITE, id);
 		}
 	} else if ((g_strcasecmp(cmd[0], "unfavourite") == 0 ||
@@ -1313,15 +1284,15 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 	            g_strcasecmp(cmd[0], "unfav") == 0 ||
 	            g_strcasecmp(cmd[0], "unlike") == 0 ||
 	            g_strcasecmp(cmd[0], "dislike") == 0) && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_post(ic, MASTODON_STATUS_UNFAVOURITE_URL, MC_UNFAVOURITE, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "pin") == 0 && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_post(ic, MASTODON_STATUS_PIN_URL, MC_PIN, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "unpin") == 0 && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_post(ic, MASTODON_STATUS_UNPIN_URL, MC_UNPIN, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "follow") == 0 && cmd[1]) {
@@ -1346,23 +1317,23 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			mastodon_post(ic, MASTODON_ACCOUNT_UNMUTE_URL, MC_ACCOUNT_UNMUTE, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "mute") == 0 && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_post(ic, MASTODON_STATUS_MUTE_URL, MC_STATUS_MUTE, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "unmute") == 0 && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_post(ic, MASTODON_STATUS_UNMUTE_URL, MC_STATUS_UNMUTE, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "boost") == 0 && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_post(ic, MASTODON_STATUS_BOOST_URL, MC_BOOST, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "unboost") == 0 && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_post(ic, MASTODON_STATUS_UNBOOST_URL, MC_UNBOOST, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "url") == 0) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_status_show_url(ic, id);
 		}
 	} else if ((g_strcasecmp(cmd[0], "whois") == 0 ||
@@ -1380,7 +1351,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		}
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			if (!cmd[2] || strlen(cmd[2]) == 0) {
 				mastodon_log(ic, "You must provide a comment with your report.");
 			} else {
@@ -1390,7 +1361,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 	} else if (g_strcasecmp(cmd[0], "search") == 0 && cmd[1]) {
 		mastodon_search(ic, cmd[1]);
 	} else if (g_strcasecmp(cmd[0], "context") == 0 && cmd[1]) {
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL, NULL, NULL))) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_context(ic, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "timeline") == 0 && cmd[1]) {
@@ -1431,23 +1402,24 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
 		GSList *mentions = NULL;
 		mastodon_visibility_t visibility = MV_UNKNOWN;
-		if ((id = mastodon_message_id_or_warn(ic, cmd[1], &bu, &mentions, &visibility))) {
+		char *spoiler_text;
+		if ((id = mastodon_message_id_or_warn_and_more(ic, cmd[1], &bu, &mentions, &visibility, &spoiler_text))) {
 			mastodon_visibility_t default_visibility = mastodon_default_visibility(ic);
 			if (default_visibility > visibility) visibility = default_visibility;
-			mastodon_post_message(ic, cmd[2], id, bu->handle, MASTODON_REPLY, mentions, visibility);
+			mastodon_post_message(ic, cmd[2], id, bu->handle, MASTODON_REPLY, mentions, visibility, spoiler_text);
 		}
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
-		mastodon_post_message(ic, message + 5, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, mastodon_default_visibility(ic));
+		mastodon_post_message(ic, message + 5, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, mastodon_default_visibility(ic), NULL);
 	} else if (g_strcasecmp(cmd[0], "public") == 0) {
-		mastodon_post_message(ic, message + 7, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_PUBLIC);
+		mastodon_post_message(ic, message + 7, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_PUBLIC, NULL);
 	} else if (g_strcasecmp(cmd[0], "unlisted") == 0) {
-		mastodon_post_message(ic, message + 9, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_UNLISTED);
+		mastodon_post_message(ic, message + 9, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_UNLISTED, NULL);
 	} else if (g_strcasecmp(cmd[0], "private") == 0) {
-		mastodon_post_message(ic, message + 8, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_PRIVATE);
+		mastodon_post_message(ic, message + 8, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_PRIVATE, NULL);
 	} else if (g_strcasecmp(cmd[0], "direct") == 0) {
-		mastodon_post_message(ic, message + 7, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_DIRECT);
+		mastodon_post_message(ic, message + 7, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_DIRECT, NULL);
 	} else if (allow_post) {
-		mastodon_post_message(ic, message, 0, cmd[0], MASTODON_MAYBE_REPLY, NULL, MV_UNKNOWN);
+		mastodon_post_message(ic, message, 0, cmd[0], MASTODON_MAYBE_REPLY, NULL, MV_UNKNOWN, NULL);
 	} else {
 		mastodon_log(ic, "Unknown command: %s", cmd[0]);
 	}
