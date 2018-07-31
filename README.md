@@ -75,9 +75,8 @@ Build dependencies
 Building and Installing
 -----------------------
 
-If building from git you will first need to generate the autotools
-configuration script and related files by executing the following
-command:
+If building from git you need to generate the autotools configuration
+script and related files by executing the following command:
 
 ```
 ./autogen.sh
