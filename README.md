@@ -1,5 +1,5 @@
 Mastodon plugin for Bitlbee
----------------------------
+===========================
 
 This plugin allows [Bitlbee](https://www.bitlbee.org/) to communicate
 with [Mastodon](https://joinmastodon.org/) instances. Mastodon is a
@@ -10,6 +10,24 @@ Bitlbee to connect to other services, such as a Mastodon instance
 where you already have an account. The benefit is that you can now use
 [any IRC client](https://en.wikipedia.org/wiki/Comparison_of_Internet_Relay_Chat_clients)
 you want to connect to Mastodon.
+
+Please report issues using the
+[Software Wiki](https://alexschroeder.ch/software/Bitlbee_Mastodon).
+For questions, ping **kensanata** on `irc.oftc.net/#bitlbee`.
+
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [License](#license)
+- [Usage](#usage)
+- [Build dependencies](#build-dependencies)
+- [Building and Installing](#building-and-installing)
+- [Debugging](#debugging)
+
+<!-- markdown-toc end -->
+
+License
+-------
 
 Most of the source code is distributed under the
 [GNU Lesser Public License 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html#SEC1).
@@ -193,10 +211,3 @@ willing to share before posting it anywhere.
 If you are experiencing crashes please refer to
 [debugging crashes](https://wiki.bitlbee.org/DebuggingCrashes)
 for information on how to get a meaningful backtrace.
-
-Bugs
-----
-
-Please report issues using the
-[Software Wiki](https://alexschroeder.ch/software/Bitlbee_Mastodon).
-For questions, ping **kensanata** on `irc.oftc.net/#bitlbee`.
