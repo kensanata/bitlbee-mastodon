@@ -762,7 +762,7 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 				mud->last_id = ms->id;
 				mud->last_time = ms->created_at;
 
-				mud->last_visibility = ms->visibility;
+				mud->visibility = ms->visibility;
 				g_slist_free_full(mud->mentions, g_free);
 				mud->mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) g_strdup, NULL);
 

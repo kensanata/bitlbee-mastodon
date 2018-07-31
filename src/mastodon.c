@@ -653,7 +653,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 						in_reply_to = mud->last_id;
 						// We're always replying to at least one person. bu->handle is fully qualified unlike who
 						m = mastodon_string_join(mud->mentions, bu->handle);
-						visibility = mud->last_visibility;
+						visibility = mud->visibility;
 						// This should always be NULL for MASTODON_MAYBE_REPLY
 						if (!spoiler_text)
 							spoiler_text = mud->spoiler_text;
@@ -874,7 +874,7 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 		if ((mud = bu->data)) {
 			id = mud->last_id;
 			if (mentions_) *mentions_ = mud->mentions;
-			if (visibility_) *visibility_ = mud->last_visibility;
+			if (visibility_) *visibility_ = mud->visibility;
 			if (spoiler_text_) *spoiler_text_ = mud->spoiler_text;
 		}
 	} else {

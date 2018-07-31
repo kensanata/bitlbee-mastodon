@@ -157,7 +157,7 @@ struct mastodon_user_data {
 	guint64 account_id;
 	guint64 last_id;
 	time_t last_time;
-	mastodon_visibility_t last_visibility;
+	mastodon_visibility_t visibility;
 	GSList *mentions;
 	char *spoiler_text;
 };
