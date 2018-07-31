@@ -153,9 +153,9 @@ static struct oauth2_service *get_oauth2_service(struct im_connection *ic)
  * not count domain part of usernames."
  * https://github.com/tootsuite/mastodon/pull/4427
  **/
-static gboolean mastodon_length_check(struct im_connection *ic, gchar *msg)
+static gboolean mastodon_length_check(struct im_connection *ic, gchar *msg, char *cw)
 {
-	int len = g_utf8_strlen(msg, -1);
+	int len = g_utf8_strlen(msg, -1) + g_utf8_strlen(cw, -1);
 	if (len == 0) {
 		mastodon_log(ic, "This message is empty.");
 		return FALSE;
@@ -492,6 +492,10 @@ static void mastodon_logout(struct im_connection *ic)
 
 		g_free(md->log); md->log = NULL;
 
+		g_slist_free_full(md->mentions, g_free); md->mentions = NULL;
+		g_free(md->last_spoiler_text); md->last_spoiler_text = NULL;
+		g_free(md->spoiler_text); md->spoiler_text = NULL;
+
 		os_free(md->oauth2_service); md->oauth2_service = NULL;
 		g_free(md->user); md->user = NULL;
 		g_free(md->name); md->name = NULL;
@@ -686,7 +690,8 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		break;
 	}
 
-	if (!mastodon_length_check(ic, text ? text : message)) {
+	if (!mastodon_length_check(ic, text ? text : message,
+			     md->spoiler_text ? md->spoiler_text : spoiler_text)) {
 		goto finish;
 	}
 
@@ -694,7 +699,9 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 	   this would delete the second-last toot. Prevent that. */
 	md->last_id = 0;
 
-	mastodon_post_status(ic, text ? text : message, in_reply_to, visibility, spoiler_text);
+	mastodon_post_status(ic, text ? text : message, in_reply_to, visibility,
+			     md->spoiler_text ? md->spoiler_text : spoiler_text);
+	g_free(md->spoiler_text); md->spoiler_text = NULL;
 
 finish:
 	g_free(text);
@@ -1407,6 +1414,15 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			mastodon_visibility_t default_visibility = mastodon_default_visibility(ic);
 			if (default_visibility > visibility) visibility = default_visibility;
 			mastodon_post_message(ic, cmd[2], id, bu->handle, MASTODON_REPLY, mentions, visibility, spoiler_text);
+		}
+	} else if (g_strcasecmp(cmd[0], "cw") == 0) {
+		g_free(md->spoiler_text);
+		if (cmd[1] == NULL) {
+			md->spoiler_text = NULL;
+			mastodon_log(ic, "Next post will get no content warning");
+		} else {
+			md->spoiler_text = g_strdup(message + 3);
+			mastodon_log(ic, "Next post will get content warning '%s'", md->spoiler_text);
 		}
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
 		mastodon_post_message(ic, message + 5, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, mastodon_default_visibility(ic), NULL);

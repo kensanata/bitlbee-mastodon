@@ -126,9 +126,13 @@ struct mastodon_data {
 
 	GSList *streams; /* of struct http_request */
 	struct groupchat *timeline_gc;
-	guint64 last_id; /* For replying or deleting the user's last status */
 	guint64 seen_id; /* For deduplication */
 	mastodon_flags_t flags;
+
+	guint64 last_id; /* For replying or deleting the user's last status */
+	GSList *mentions;
+	char *last_spoiler_text;
+	char *spoiler_text; /* CW for the next post */
 
 	mastodon_undo_t undo_type; /* for the current command */
 	char *undo[MASTODON_MAX_UNDO]; /* a small stack of undo statements */

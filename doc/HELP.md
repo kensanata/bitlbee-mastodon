@@ -168,15 +168,17 @@ The default **commands** setting is **true**. This means that anything you type 
 
 Use **help set commands** in your Bitlbee control channel (**&bitlbee**) to read up on the various commands.
 
-When posting like this, new posts will use the default visibility. By default, this is "public". See **help set visibility** for more. You can change the visibility of a new toot by using one of the following commands instead of **post**: **public**, **unlisted**, **private**, or **direct** (only mentioned users can see it).
+When posting like this, new posts the default visibility: "public". See **help set visibility** for more. You can change the visibility of a new toot by using one of the following commands instead of **post**: **public**, **unlisted**, **private**, or **direct** (only mentioned users can see it).
 
 When mentioning people in your toots, make sure to qualify them appropriately. Example:
 
 > **&lt;somebody&gt;** I'm using @kensanata@octodon.social's Mastodon plugin for Bitlbee.  
 
-Note that a well behaved Mastodon client will limit your toots to 500 characters even though the underlying protocols allow for longer messages. By default, Bitlbee does the same. Use **help set message_length** in your Bitlbee control channel (**&bitlbee**) to read up on the hairy details. Basically, some aspects of of your message will count for less: URLs, domain names for mentioned user accounts and the like. See **help set target_url_length** for more information on how URLs are counted.
+By default the Mastodon server limits your toots to 500 characters. Bitlbee tries to compute the message length based on the various Mastodon rules and prevents you from posting longer messages. Use **help set message_length** in your Bitlbee control channel (**&bitlbee**) to read up on the hairy details. Basically, some aspects of of your message will count for less: URLs, domain names for mentioned user accounts and the like. See **help set target_url_length** for more information on how URLs are counted.
 
 Note also that Bitlbee itself does word-wrapping to limit messages to 425 characters. That is why longer messages may look like extra newlines have been introduced but if you check the status on the web, you'll see that everything is OK.
+
+Use **cw &lt;content warning&gt;** to set a content warning for your next reply or post.
 
 ## undo
 Use **undo** and **redo** to undo and redo recent commands. Bitlbee will remember your last 10 Mastodon commands and allows you to undo and redo them.
@@ -196,13 +198,15 @@ Use **context &lt;id|nick&gt;** to show some context for a status or the last st
 Use **timeline &lt;nick&gt;** to show the most recent messages by a nick. Use **more** to show more statuses from the same command.
 
 ## reply
-If you use the default IRC conventions of starting a message with a nickname and a colon (**:**) or a comma (**,**), then your message will be treated as a reply to that nick's last message. As is custom, the recipient and all the people they mentioned in their toot will get mentioned in your reply. This only works if that nick's last message was sent within the last 3h. For more information about this time window use **help set auto_reply_timeout** in your Bitlbee control channel (**&bitlbee**).
+If you use the default IRC conventions of starting a message with a nickname and a colon (**:**) or a comma (**,**), then your message will be treated as a reply to that nick's last message. As is custom, the recipient and all the people they mentioned in their toot get mentioned in your reply. This only works if that nick's last message was sent within the last 3h. For more information about this time window use **help set auto_reply_timeout** in your Bitlbee control channel (**&bitlbee**).
 
-You can also reply to an earlier message by referring to its id using the **reply &lt;id&gt; &lt;message&gt;** command. Again, the recipient and all the people they mentioned in their toot will get mentioned in your reply.
+You can also reply to an earlier message by referring to its id using the **reply &lt;id&gt; &lt;message&gt;** command. Again, the recipient and all the people they mentioned in their toot get mentioned in your reply.
 
 If you set the **commands** setting to **strict**, using the **reply** command is mandatory.
 
-When replying to a post, your reply will use the same visibility as the original toot unless your default visibility is more restricted: direct &gt; private &gt; unlisted &gt; public. See **help set visibility** for more.
+When replying to a post, your reply uses the same visibility as the original toot unless your default visibility is more restricted: direct &gt; private &gt; unlisted &gt; public. See **help set visibility** for more.
+
+When replying to a post, your reply uses the same content warning unless you have set up a different one via **cw**. See *[post](#post)* for more.
 
 ## delete
 Use **del &lt;id&gt;** to delete a status or your last status. Synonym: **delete**.
