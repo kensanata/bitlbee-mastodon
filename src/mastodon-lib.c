@@ -1546,6 +1546,23 @@ void mastodon_notifications(struct im_connection *ic)
 	mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_notifications, ic, HTTP_GET, NULL, 0);
 }
 
+static char *mastodon_visibility(mastodon_visibility_t visibility)
+{
+	switch (visibility) {
+	case MV_UNKNOWN:
+	case MV_PUBLIC:
+		return "public";
+	case MV_UNLISTED:
+		return "unlisted";
+	case MV_PRIVATE:
+		return "private";
+	case MV_DIRECT:
+		return "direct";
+	}
+	g_assert(FALSE); // should not happen
+	return NULL;
+}
+
 /**
  * Generic callback to use after sending a POST request to mastodon
  * when the reply doesn't have any information we need. All we care
@@ -1587,12 +1604,30 @@ static void mastodon_http_callback(struct http_request *req)
 			g_slist_free_full(md->mentions, g_free);
 			md->mentions = ms->mentions; // adopt
 			ms->mentions = NULL;
+
 			if(md->undo_type == MASTODON_NEW) {
-				mastodon_do(ic,
-					    ms->reply_to
-					    ? g_strdup_printf("reply %" G_GUINT64_FORMAT " %s", ms->reply_to, ms->text)
-					    : g_strdup_printf("post %s", ms->text),
-					    g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id));
+
+				char *todo = NULL;
+				char *undo = g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id);
+
+				if (md->last_spoiler_text) {
+					todo = g_strdup_printf("unsupported post with CW '%s'",
+							       md->last_spoiler_text);
+				} else if (ms->reply_to) {
+					if (md->visibility == MV_PUBLIC) {
+						todo = g_strdup_printf("reply %" G_GUINT64_FORMAT " %s",
+								       ms->reply_to, ms->text);
+					} else {
+						todo = g_strdup_printf("unsupported non-public reply %" G_GUINT64_FORMAT " %s",
+								       ms->reply_to, ms->text);
+					}
+				} else {
+					todo = g_strdup_printf("%s %s",
+							       mastodon_visibility(ms->visibility), ms->text);
+				}
+
+				mastodon_do(ic, todo, undo);
+
 			} else {
 				char *s = g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id);
 				mastodon_do_update(ic, s);
@@ -1794,23 +1829,6 @@ static void mastodon_http_log_all(struct http_request *req)
 	}
 
 	json_value_free(parsed);
-}
-
-static char *mastodon_visibility(mastodon_visibility_t visibility)
-{
-	switch (visibility) {
-	case MV_UNKNOWN:
-	case MV_PUBLIC:
-		return "public";
-	case MV_UNLISTED:
-		return "unlisted";
-	case MV_PRIVATE:
-		return "private";
-	case MV_DIRECT:
-		return "direct";
-	}
-	g_assert(FALSE); // should not happen
-	return NULL;
 }
 
 /**

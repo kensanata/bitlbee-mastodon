@@ -1217,7 +1217,7 @@ void mastodon_history(struct im_connection *ic, gboolean undo_history) {
 
 /**
  * Commands we understand. Changes should be documented in
- * commands.xml and on https://wiki.bitlbee.org/HowtoMastodon
+ * doc/mastodon-help.txt and on https://wiki.bitlbee.org/HowtoMastodon
  */
 static void mastodon_handle_command(struct im_connection *ic, char *message, mastodon_undo_t undo_type)
 {
