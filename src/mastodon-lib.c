@@ -1582,7 +1582,7 @@ static void mastodon_http_callback(struct http_request *req)
 			md->last_id = ms->id;
 			md->visibility = ms->visibility;
 			g_free(md->last_spoiler_text);
-			last_spoiler_text = ms->spoiler_text; // adopt
+			md->last_spoiler_text = ms->spoiler_text; // adopt
 			ms->spoiler_text = NULL;
 			g_slist_free_full(md->mentions, g_free);
 			md->mentions = ms->mentions; // adopt

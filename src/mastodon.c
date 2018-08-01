@@ -658,9 +658,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 						// We're always replying to at least one person. bu->handle is fully qualified unlike who
 						m = mastodon_string_join(mud->mentions, bu->handle);
 						visibility = mud->visibility;
-						// This should always be NULL for MASTODON_MAYBE_REPLY
-						if (!spoiler_text)
-							spoiler_text = mud->spoiler_text;
+						spoiler_text = mud->spoiler_text;
 					} else {
 						// this is a new message but we still need to prefix the @ and use bu->handle instead of who
 						m = g_string_new("@");
@@ -673,16 +671,23 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 
 				} else if (strcmp(who, md->user) == 0) {
 
-					// Replying to myself.
+					/* Same as a above but replying to myself and therefore using mastodon_data
+					   (md). We don't set this data to NULL because we might want to send multiple
+					   replies to ourselves. We want this to work on a slow instance, so the user
+					   can send multiple replies without having to wait for replies to come back and
+					   set these values again via mastodon_http_callback. */
 					in_reply_to = md->last_id;
-
-					// FIXME: add mentions (which we need to get from somewhere)
-
-					// Change "foo: bar" to "bar"
-					if (*(s + 1) == ' ') {
-						s++;
+					visibility = md->visibility;
+					spoiler_text = g_strdup(md->last_spoiler_text);
+					if (md->mentions) {
+						m = mastodon_string_join(md->mentions, NULL);
+						mastodon_log(ic, "Mentions %s", m->str);
+						text = g_strdup_printf("%s %s", m->str, message + wlen + 1);
+						g_string_free(m, TRUE);
+					} else {
+						// use +wlen+1 to remove "nick: " (note the space) from message
+						message += wlen + 1;
 					}
-					message = s;
 				}
 			}
 			if (default_visibility > visibility) visibility = default_visibility;
@@ -695,10 +700,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		goto finish;
 	}
 
-	/* If the user runs undo between this request and its response
-	   this would delete the second-last toot. Prevent that. */
-	md->last_id = 0;
-
+	/* The md->spoiler_text set by the CW command takes precedence and gets removed after posting. */
 	mastodon_post_status(ic, text ? text : message, in_reply_to, visibility,
 			     md->spoiler_text ? md->spoiler_text : spoiler_text);
 	g_free(md->spoiler_text); md->spoiler_text = NULL;
