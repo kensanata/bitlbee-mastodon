@@ -1580,6 +1580,13 @@ static void mastodon_http_callback(struct http_request *req)
 		ms = mastodon_xt_get_status(parsed, ic);
 		if (ms && ms->id && strcmp(ms->account->acct, md->user) == 0) {
 			md->last_id = ms->id;
+			md->visibility = ms->visibility;
+			g_free(md->last_spoiler_text);
+			last_spoiler_text = ms->spoiler_text; // adopt
+			ms->spoiler_text = NULL;
+			g_slist_free_full(md->mentions, g_free);
+			md->mentions = ms->mentions; // adopt
+			ms->mentions = NULL;
 			if(md->undo_type == MASTODON_NEW) {
 				mastodon_do(ic,
 					    ms->reply_to
@@ -1948,6 +1955,8 @@ void mastodon_http_status_delete(struct http_request *req)
 		md->last_id = ms->id;
 
 		mc->redo = g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id);
+
+		// FIXME: visibility, spoiler text
 
 		if (ms->reply_to) {
 			if (ms->visibility == MV_PUBLIC) {

@@ -130,6 +130,7 @@ struct mastodon_data {
 	mastodon_flags_t flags;
 
 	guint64 last_id; /* For replying or deleting the user's last status */
+	mastodon_visibility_t visibility;
 	GSList *mentions;
 	char *last_spoiler_text;
 	char *spoiler_text; /* CW for the next post */
