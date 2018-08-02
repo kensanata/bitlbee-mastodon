@@ -86,6 +86,8 @@ typedef enum {
 	MASTODON_REDO,
 } mastodon_undo_t;
 
+#define FS "\x1e"
+
 /**
  * These are the commands that can be undone and redone.
  */

@@ -72,6 +72,7 @@ struct mastodon_status {
 	time_t created_at;
 	char *spoiler_text;
 	char *text;
+	char *content; /* same as text without CW and NSFW prefixes */
 	char *url;
 	struct mastodon_account *account;
 	guint64 id;
@@ -153,6 +154,7 @@ static void ms_free(struct mastodon_status *ms)
 
 	g_free(ms->spoiler_text);
 	g_free(ms->text);
+	g_free(ms->content);
 	g_free(ms->url);
 	ma_free(ms->account);
 	g_slist_free_full(ms->tags, g_free);
@@ -562,6 +564,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		if (text_value) {
 			char *text = g_strdup(text_value->u.string.ptr);
 			mastodon_strip_html(text);
+			ms->content = g_strdup(text);
 			char *fmt = "%s";
 			if (spoiler_value && use_cw1) {
 				char *wrapped = NULL;
@@ -1610,20 +1613,35 @@ static void mastodon_http_callback(struct http_request *req)
 				char *todo = NULL;
 				char *undo = g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id);
 
-				if (md->last_spoiler_text) {
-					todo = g_strdup_printf("unsupported post with CW '%s'",
-							       md->last_spoiler_text);
-				} else if (ms->reply_to) {
-					if (md->visibility == MV_PUBLIC) {
-						todo = g_strdup_printf("reply %" G_GUINT64_FORMAT " %s",
-								       ms->reply_to, ms->text);
+				if (ms->reply_to) {
+					/* At this point redoing the reply no longer has the reference to the toot we are replying to (which
+					 * only works by looking it up in the mastodon_user_data (mud) or the md->log). That is why we need
+					 * to add spoiler_text and visibility to the redo list. */
+					if (ms->spoiler_text) {
+						todo = g_strdup_printf(
+							"cw %s" FS
+							"reply-%s %" G_GUINT64_FORMAT " %s",
+							ms->spoiler_text,
+							mastodon_visibility(ms->visibility),
+							ms->reply_to, ms->content);
 					} else {
-						todo = g_strdup_printf("unsupported non-public reply %" G_GUINT64_FORMAT " %s",
-								       ms->reply_to, ms->text);
+						todo = g_strdup_printf(
+							"reply-%s %" G_GUINT64_FORMAT " %s",
+							mastodon_visibility(ms->visibility),
+							ms->reply_to, ms->content);
 					}
 				} else {
-					todo = g_strdup_printf("%s %s",
-							       mastodon_visibility(ms->visibility), ms->text);
+					if (ms->spoiler_text) {
+						todo = g_strdup_printf(
+							"cw %s" FS
+							"%s %s",
+							ms->spoiler_text,
+							mastodon_visibility(ms->visibility), ms->content);
+					} else {
+						todo = g_strdup_printf(
+							"%s %s",
+							mastodon_visibility(ms->visibility), ms->content);
+					}
 				}
 
 				mastodon_do(ic, todo, undo);
@@ -1979,18 +1997,18 @@ void mastodon_http_status_delete(struct http_request *req)
 		if (ms->reply_to) {
 			if (ms->visibility == MV_PUBLIC) {
 				mc->undo = g_strdup_printf("reply %" G_GUINT64_FORMAT " %s",
-							   ms->reply_to, ms->text);
+							   ms->reply_to, ms->content);
 			} else {
 				mc->undo = g_strdup_printf("unsupported direct reply %" G_GUINT64_FORMAT " %s",
-							   ms->reply_to, ms->text);
+							   ms->reply_to, ms->content);
 			}
 		} else {
 			if (ms->visibility == MV_PUBLIC) {
 				mc->undo = g_strdup_printf("post %s",
-							   ms->text);
+							   ms->content);
 			} else {
 				mc->undo = g_strdup_printf("unsupported direct post %s",
-							   ms->text);
+							   ms->content);
 			}
 		}
 	}
@@ -2352,6 +2370,7 @@ static void mastodon_string_append(gchar *data, GString *user_data)
  */
 GString *mastodon_string_join(GSList *l, gchar *init)
 {
+	if (!l) return NULL;
 	GString *s = g_string_new(NULL);
 	if (init) {
 		g_string_append(s, "@");

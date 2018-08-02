@@ -615,13 +615,12 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		visibility = MV_DIRECT;
 		// fall through
 	case MASTODON_REPLY:
-		/* Mentioning OP and other mentions is the traditional thing to do. */
+		/* Mentioning OP and other mentions is the traditional thing to do. Note that who can be NULL if we're
+		   redoing a command like "redo 1234567 foo" where we didn't get any user info from the status id. */
+		if (!who) break;
 		if (g_strcasecmp(who, md->user) == 0) {
 			/* if replying to ourselves, we still want to mention others, if any */
-			if (mentions) {
-				m = mastodon_string_join(mentions, NULL);
-			}
-			/* if no mentions and replying to ourselves, m remains NULL */
+			m = mastodon_string_join(mentions, NULL);
 		} else {
 			/* if replying to others, mention them, too */
 			m = mastodon_string_join(mentions, who);
@@ -1123,7 +1122,7 @@ void mastodon_undo(struct im_connection *ic) {
 }
 
 /**
- * Redo the last command.
+ * Redo the last command. Multiple commands can be executed as one using the ASCII Field Separator (FS).
  */
 void mastodon_redo(struct im_connection *ic) {
 	struct mastodon_data *md = ic->proto_data;
@@ -1136,7 +1135,14 @@ void mastodon_redo(struct im_connection *ic) {
 	md->current_undo = (md->current_undo + 1) % MASTODON_MAX_UNDO;
 	char *cmd = md->redo[md->current_undo];
 
-	mastodon_handle_command(ic, cmd, MASTODON_REDO);
+	gchar **cmds = g_strsplit (cmd, FS, -1);
+
+	int i;
+	for (i = 0; cmds[i]; i++) {
+		mastodon_handle_command(ic, cmds[i], MASTODON_REDO);
+	}
+
+	g_strfreev(cmds);
 }
 
 /**
@@ -1410,12 +1416,19 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		}
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
 		GSList *mentions = NULL;
-		mastodon_visibility_t visibility = MV_UNKNOWN;
 		char *spoiler_text;
+		mastodon_visibility_t visibility = MV_UNKNOWN;
 		if ((id = mastodon_message_id_or_warn_and_more(ic, cmd[1], &bu, &mentions, &visibility, &spoiler_text))) {
 			mastodon_visibility_t default_visibility = mastodon_default_visibility(ic);
 			if (default_visibility > visibility) visibility = default_visibility;
 			mastodon_post_message(ic, cmd[2], id, bu->handle, MASTODON_REPLY, mentions, visibility, spoiler_text);
+		}
+	} else if (g_strncasecmp(cmd[0], "reply-", 6) == 0 && cmd[1] && cmd[2]) {
+		mastodon_visibility_t visibility = mastodon_parse_visibility(cmd[0] + 6);
+		if (visibility == MV_UNKNOWN) {
+			mastodon_log(ic, "Sadly, '%s' is not a known visibility for Mastodon.", cmd[0] + 6);
+		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
+			mastodon_post_message(ic, cmd[2], id, NULL, MASTODON_REPLY, NULL, visibility, NULL);
 		}
 	} else if (g_strcasecmp(cmd[0], "cw") == 0) {
 		g_free(md->spoiler_text);
