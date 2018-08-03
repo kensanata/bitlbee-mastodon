@@ -676,7 +676,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 					   can send multiple replies without having to wait for replies to come back and
 					   set these values again via mastodon_http_callback. */
 					in_reply_to = md->last_id;
-					visibility = md->visibility;
+					visibility = md->last_visibility;
 					spoiler_text = g_strdup(md->last_spoiler_text);
 					if (md->mentions) {
 						m = mastodon_string_join(md->mentions, NULL);

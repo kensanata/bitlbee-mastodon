@@ -1600,7 +1600,7 @@ static void mastodon_http_callback(struct http_request *req)
 		ms = mastodon_xt_get_status(parsed, ic);
 		if (ms && ms->id && strcmp(ms->account->acct, md->user) == 0) {
 			md->last_id = ms->id;
-			md->visibility = ms->visibility;
+			md->last_visibility = ms->visibility;
 			g_free(md->last_spoiler_text);
 			md->last_spoiler_text = ms->spoiler_text; // adopt
 			ms->spoiler_text = NULL;

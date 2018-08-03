@@ -131,10 +131,12 @@ struct mastodon_data {
 	guint64 seen_id; /* For deduplication */
 	mastodon_flags_t flags;
 
-	guint64 last_id; /* For replying or deleting the user's last status */
-	mastodon_visibility_t visibility;
-	GSList *mentions;
+	guint64 last_id; /* Information about our last status posted */
+	mastodon_visibility_t last_visibility;
 	char *last_spoiler_text;
+	GSList *mentions;
+
+	mastodon_visibility_t visibility; /* visibility for the next status */
 	char *spoiler_text; /* CW for the next post */
 
 	mastodon_undo_t undo_type; /* for the current command */
