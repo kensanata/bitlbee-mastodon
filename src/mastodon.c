@@ -1122,7 +1122,14 @@ void mastodon_undo(struct im_connection *ic) {
 		return;
 	}
 
-	mastodon_handle_command(ic, cmd, MASTODON_UNDO);
+	gchar **cmds = g_strsplit (cmd, FS, -1);
+
+	int i;
+	for (i = 0; cmds[i]; i++) {
+		mastodon_handle_command(ic, cmds[i], MASTODON_UNDO);
+	}
+
+	g_strfreev(cmds);
 
 	// beware of negatives and modulo
 	md->current_undo = (md->current_undo + MASTODON_MAX_UNDO - 1) % MASTODON_MAX_UNDO;

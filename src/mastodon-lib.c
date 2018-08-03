@@ -1988,33 +1988,36 @@ void mastodon_http_status_delete(struct http_request *req)
 		return;
 	}
 
-	/* Remember the text  */
+	/* Maintain undo/redo list. */
 	struct mastodon_status *ms = mastodon_xt_get_status(parsed, ic);
 	struct mastodon_data *md = ic->proto_data;
 	if (ms && ms->id && strcmp(ms->account->acct, md->user) == 0) {
 		md->last_id = ms->id;
 
 		mc->redo = g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id);
+		GString *todo = g_string_new (NULL);
 
-		// FIXME: visibility, spoiler text
+		if (ms->spoiler_text) {
+			g_string_append_printf(todo, "cw %s" FS, ms->spoiler_text);
+		} else {
+			g_string_append(todo, "cw" FS);
+		}
+
+		if (mastodon_default_visibility(ic) != ms->visibility) {
+			g_string_append_printf(todo, "visibility %s" FS, mastodon_visibility(ms->visibility));
+		} else {
+			g_string_append(todo, "visibility" FS);
+		}
 
 		if (ms->reply_to) {
-			if (ms->visibility == MV_PUBLIC) {
-				mc->undo = g_strdup_printf("reply %" G_GUINT64_FORMAT " %s",
-							   ms->reply_to, ms->content);
-			} else {
-				mc->undo = g_strdup_printf("unsupported direct reply %" G_GUINT64_FORMAT " %s",
-							   ms->reply_to, ms->content);
-			}
+			g_string_append_printf(todo, "reply %" G_GUINT64_FORMAT " ", ms->reply_to);
 		} else {
-			if (ms->visibility == MV_PUBLIC) {
-				mc->undo = g_strdup_printf("post %s",
-							   ms->content);
-			} else {
-				mc->undo = g_strdup_printf("unsupported direct post %s",
-							   ms->content);
-			}
+			g_string_append(todo, "post ");
 		}
+		g_string_append(todo, ms->content);
+
+		mc->undo = todo->str;
+		g_string_free(todo, FALSE); /* data is kept by mc! */
 	}
 
 	char *url = g_strdup_printf(MASTODON_STATUS_URL, mc->id);
