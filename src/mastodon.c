@@ -155,11 +155,13 @@ static struct oauth2_service *get_oauth2_service(struct im_connection *ic)
  **/
 static gboolean mastodon_length_check(struct im_connection *ic, gchar *msg, char *cw)
 {
-	int len = g_utf8_strlen(msg, -1) + g_utf8_strlen(cw, -1);
+	int len = g_utf8_strlen(msg, -1);
 	if (len == 0) {
 		mastodon_log(ic, "This message is empty.");
 		return FALSE;
 	}
+
+	len+= g_utf8_strlen(cw, -1);
 
 	int max = set_getint(&ic->acc->set, "message_length");
 	if (max == 0) {
@@ -592,11 +594,6 @@ int oauth2_refresh(struct im_connection *ic, const char *refresh_token)
 	                           refresh_token, oauth2_got_token, ic);
 }
 
-static mastodon_visibility_t mastodon_default_visibility(struct im_connection *ic)
-{
-	return mastodon_parse_visibility(set_getstr(&ic->acc->set, "visibility"));
-}
-
 /**
  * Post a message. Make sure we get all the meta data for the status right.
  */
@@ -629,14 +626,15 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 			text = g_strdup_printf("%s %s", m->str, message);
 			g_string_free(m, TRUE);
 		}
+		/* Note that visibility and spoiler_text have already been set, no need to do anything else. */
 		break;
 	case MASTODON_NEW_MESSAGE:
-		// Do nothing.
+		visibility = md->visibility;
+		/* Note that at the end we will use the default visibility if this is NULL. */
 		break;
 	case MASTODON_MAYBE_REPLY:
 		{
 			g_assert(visibility == MV_UNKNOWN);
-			mastodon_visibility_t default_visibility = mastodon_default_visibility(ic);
 			wlen = strlen(who); // length of the first word
 
 			// If the message starts with "nick:" or "nick,"
@@ -689,7 +687,6 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 					}
 				}
 			}
-			if (default_visibility > visibility) visibility = default_visibility;
 		}
 		break;
 	}
@@ -699,10 +696,22 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		goto finish;
 	}
 
-	/* The md->spoiler_text set by the CW command takes precedence and gets removed after posting. */
+	/* If we explicitly set a visibility for the next toot, use that. Otherwise, use the visibility as determined above,
+	 * but make sure that a higher default visibility takes precedence: higher means more private. See
+	 * mastodon_visibility_t. */
+	if (md->visibility != MV_UNKNOWN) {
+		visibility = md->visibility;
+	} else {
+		mastodon_visibility_t default_visibility = mastodon_default_visibility(ic);
+		if (default_visibility > visibility) visibility = default_visibility;
+	}
+
+	/* md->spoiler_text set by the CW command and md->visibility set by the VISIBILITY command take precedence and get
+	 * removed after posting. */
 	mastodon_post_status(ic, text ? text : message, in_reply_to, visibility,
 			     md->spoiler_text ? md->spoiler_text : spoiler_text);
 	g_free(md->spoiler_text); md->spoiler_text = NULL;
+	md->visibility = MV_UNKNOWN;
 
 finish:
 	g_free(text);
@@ -937,8 +946,6 @@ static guint64 mastodon_message_id_or_warn_and_more(struct im_connection *ic, ch
 	guint64 id = mastodon_message_id_from_command_arg(ic, what, bu, mentions, visibility, spoiler_text);
 	if (!id) {
 		mastodon_no_id_warning(ic, what);
-	} else if (bu && !*bu) {
-		mastodon_unknown_user_warning(ic, what);
 	}
 	return id;
 }
@@ -1210,13 +1217,21 @@ void mastodon_history(struct im_connection *ic, gboolean undo_history) {
 	for (i = 0; i < MASTODON_MAX_UNDO; i++) {
 		// start with the last
 		int n = (md->first_undo + i + 1) % MASTODON_MAX_UNDO;
-		char *s = undo_history ? md->undo[n] : md->redo[n];
-		if (s) {
-			if (n == md->current_undo) {
-				mastodon_log(ic, "%02d > %s", MASTODON_MAX_UNDO - i, s);
-			} else {
-				mastodon_log(ic, "%02d %s", MASTODON_MAX_UNDO - i, s);
+		char *cmd = undo_history ? md->undo[n] : md->redo[n];
+
+		if (cmd) {
+			gchar **cmds = g_strsplit (cmd, FS, -1);
+
+			int j;
+			for (j = 0; cmds[j]; j++) {
+				if (n == md->current_undo) {
+					mastodon_log(ic, "%02d > %s", MASTODON_MAX_UNDO - i, cmds[j]);
+				} else {
+					mastodon_log(ic, "%02d %s", MASTODON_MAX_UNDO - i, cmds[j]);
+				}
 			}
+
+			g_strfreev(cmds);
 		}
 	}
 }
@@ -1415,20 +1430,17 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			mastodon_log(ic, "More of what? Use the timeline command, first.");
 		}
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
+		/* These three variables will be set, if we find the toot we are replying to in our log or in the
+		 * mastodon_user_data (mud). If we are replying to a fixed id, then we'll get an id and the three variables
+		 * remain untouched, so handle them with care. */
 		GSList *mentions = NULL;
-		char *spoiler_text;
+		char *spoiler_text = NULL;
 		mastodon_visibility_t visibility = MV_UNKNOWN;
 		if ((id = mastodon_message_id_or_warn_and_more(ic, cmd[1], &bu, &mentions, &visibility, &spoiler_text))) {
 			mastodon_visibility_t default_visibility = mastodon_default_visibility(ic);
 			if (default_visibility > visibility) visibility = default_visibility;
-			mastodon_post_message(ic, cmd[2], id, bu->handle, MASTODON_REPLY, mentions, visibility, spoiler_text);
-		}
-	} else if (g_strncasecmp(cmd[0], "reply-", 6) == 0 && cmd[1] && cmd[2]) {
-		mastodon_visibility_t visibility = mastodon_parse_visibility(cmd[0] + 6);
-		if (visibility == MV_UNKNOWN) {
-			mastodon_log(ic, "Sadly, '%s' is not a known visibility for Mastodon.", cmd[0] + 6);
-		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
-			mastodon_post_message(ic, cmd[2], id, NULL, MASTODON_REPLY, NULL, visibility, NULL);
+			char *who = bu ? bu->handle : NULL;
+			mastodon_post_message(ic, cmd[2], id, who, MASTODON_REPLY, mentions, visibility, spoiler_text);
 		}
 	} else if (g_strcasecmp(cmd[0], "cw") == 0) {
 		g_free(md->spoiler_text);
@@ -1439,16 +1451,22 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			md->spoiler_text = g_strdup(message + 3);
 			mastodon_log(ic, "Next post will get content warning '%s'", md->spoiler_text);
 		}
+	} else if ((g_strcasecmp(cmd[0], "visibility") == 0 ||
+				g_strcasecmp(cmd[0], "vis") == 0)) {
+		if (cmd[1] == NULL) {
+			md->visibility = mastodon_default_visibility(ic);
+		} else {
+			md->visibility = mastodon_parse_visibility(cmd[1]);
+		}
+		mastodon_log(ic, "Next post is %s",
+					 mastodon_visibility(md->visibility));
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
-		mastodon_post_message(ic, message + 5, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, mastodon_default_visibility(ic), NULL);
-	} else if (g_strcasecmp(cmd[0], "public") == 0) {
-		mastodon_post_message(ic, message + 7, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_PUBLIC, NULL);
-	} else if (g_strcasecmp(cmd[0], "unlisted") == 0) {
-		mastodon_post_message(ic, message + 9, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_UNLISTED, NULL);
-	} else if (g_strcasecmp(cmd[0], "private") == 0) {
-		mastodon_post_message(ic, message + 8, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_PRIVATE, NULL);
-	} else if (g_strcasecmp(cmd[0], "direct") == 0) {
-		mastodon_post_message(ic, message + 7, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_DIRECT, NULL);
+		mastodon_post_message(ic, message + 5, 0, cmd[1], MASTODON_NEW_MESSAGE, NULL, MV_UNKNOWN, NULL);
+	} else if (g_strcasecmp(cmd[0], "public") == 0 ||
+			   g_strcasecmp(cmd[0], "unlisted") == 0 ||
+			   g_strcasecmp(cmd[0], "private") == 0 ||
+			   g_strcasecmp(cmd[0], "direct") == 0) {
+		mastodon_log(ic, "Please use the visibility command instead");
 	} else if (allow_post) {
 		mastodon_post_message(ic, message, 0, cmd[0], MASTODON_MAYBE_REPLY, NULL, MV_UNKNOWN, NULL);
 	} else {

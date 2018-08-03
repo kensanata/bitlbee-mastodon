@@ -798,13 +798,18 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 /**
  * Helper function for mastodon_status_show_chat.
  */
-static void mastodon_status_show_chat1(gboolean me, struct groupchat *c, char *msg, struct mastodon_status *status)
+static void mastodon_status_show_chat1(struct im_connection *ic, gboolean me, struct groupchat *c, char *msg, struct mastodon_status *ms)
 {
 	if (me) {
-		imcb_chat_log(c, "You: %s", msg ? msg : status->text);
+		mastodon_visibility_t default_visibility = mastodon_default_visibility(ic);
+		if (ms->visibility == default_visibility) {
+			imcb_chat_log(c, "You: %s", msg ? msg : ms->text);
+		} else {
+			imcb_chat_log(c, "You, %s: %s", mastodon_visibility(ms->visibility), msg ? msg : ms->text);
+		}
 	} else {
-		imcb_chat_msg(c, status->account->acct,
-			      msg ? msg : status->text, 0, status->created_at);
+		imcb_chat_msg(c, ms->account->acct,
+			      msg ? msg : ms->text, 0, ms->created_at);
 	}
 }
 
@@ -837,7 +842,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 			char *tag = l->data;
 			struct groupchat *c = bee_chat_by_title(ic->bee, ic, tag);
 			if (c) {
-				mastodon_status_show_chat1(me, c, msg, status);
+				mastodon_status_show_chat1(ic, me, c, msg, status);
 				seen = TRUE;
 			}
 		}
@@ -846,7 +851,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 	case MT_LOCAL:
 		c = bee_chat_by_title(ic->bee, ic, "local");
 		if (c) {
-			mastodon_status_show_chat1(me, c, msg, status);
+			mastodon_status_show_chat1(ic, me, c, msg, status);
 			seen = TRUE;
 		}
 		break;
@@ -854,7 +859,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 	case MT_FEDERATED:
 		c = bee_chat_by_title(ic->bee, ic, "federated");
 		if (c) {
-			mastodon_status_show_chat1(me, c, msg, status);
+			mastodon_status_show_chat1(ic, me, c, msg, status);
 			seen = TRUE;
 		}
 		break;
@@ -868,7 +873,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 	// groupchat exists.
 	if (!seen) {
 		c = mastodon_groupchat_init(ic);
-		mastodon_status_show_chat1(me, c, msg, status);
+		mastodon_status_show_chat1(ic, me, c, msg, status);
 		seen = TRUE;
 	}
 
@@ -878,12 +883,12 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 /**
  * Function that is called to see statuses as private messages.
  */
-static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_status *status)
+static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_status *ms)
 {
 	struct mastodon_data *md = ic->proto_data;
 	char from[MAX_STRING] = "";
 	char *prefix = NULL, *text = NULL;
-	gboolean me = g_strcasecmp(md->user, status->account->acct) == 0;
+	gboolean me = g_strcasecmp(md->user, ms->account->acct) == 0;
 	char *name = set_getstr(&ic->acc->set, "name");
 
 	if (md->flags & MASTODON_MODE_ONE) {
@@ -892,18 +897,18 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 
 	if (md->flags & MASTODON_MODE_ONE) {
 		prefix = g_strdup_printf("\002<\002%s\002>\002 ",
-		                         status->account->acct);
+		                         ms->account->acct);
 	} else if (!me) {
-		mastodon_add_buddy(ic, status->account->id, status->account->acct, status->account->display_name);
+		mastodon_add_buddy(ic, ms->account->id, ms->account->acct, ms->account->display_name);
 	} else {
 		prefix = g_strdup("You: ");
 	}
 
-	text = mastodon_msg_add_id(ic, status, prefix ? prefix : "");
+	text = mastodon_msg_add_id(ic, ms, prefix ? prefix : "");
 
 	imcb_buddy_msg(ic,
-	               *from ? from : status->account->acct,
-	               text ? text : status->text, 0, status->created_at);
+	               *from ? from : ms->account->acct,
+	               text ? text : ms->text, 0, ms->created_at);
 
 	g_free(text);
 	g_free(prefix);
@@ -1549,7 +1554,12 @@ void mastodon_notifications(struct im_connection *ic)
 	mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_notifications, ic, HTTP_GET, NULL, 0);
 }
 
-static char *mastodon_visibility(mastodon_visibility_t visibility)
+mastodon_visibility_t mastodon_default_visibility(struct im_connection *ic)
+{
+	return mastodon_parse_visibility(set_getstr(&ic->acc->set, "visibility"));
+}
+
+char *mastodon_visibility(mastodon_visibility_t visibility)
 {
 	switch (visibility) {
 	case MV_UNKNOWN:
@@ -1610,41 +1620,35 @@ static void mastodon_http_callback(struct http_request *req)
 
 			if(md->undo_type == MASTODON_NEW) {
 
-				char *todo = NULL;
+				GString *todo = g_string_new (NULL);
 				char *undo = g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id);
 
-				if (ms->reply_to) {
-					/* At this point redoing the reply no longer has the reference to the toot we are replying to (which
-					 * only works by looking it up in the mastodon_user_data (mud) or the md->log). That is why we need
-					 * to add spoiler_text and visibility to the redo list. */
-					if (ms->spoiler_text) {
-						todo = g_strdup_printf(
-							"cw %s" FS
-							"reply-%s %" G_GUINT64_FORMAT " %s",
-							ms->spoiler_text,
-							mastodon_visibility(ms->visibility),
-							ms->reply_to, ms->content);
-					} else {
-						todo = g_strdup_printf(
-							"reply-%s %" G_GUINT64_FORMAT " %s",
-							mastodon_visibility(ms->visibility),
-							ms->reply_to, ms->content);
-					}
+				/* At this point redoing the reply no longer has the reference to the toot we are replying to (which
+				 * only works by looking it up in the mastodon_user_data (mud) or the md->log). That is why we need
+				 * to add spoiler_text and visibility to the todo item on our redo list. */
+
+				if (ms->spoiler_text) {
+					g_string_append_printf(todo, "cw %s" FS, ms->spoiler_text);
 				} else {
-					if (ms->spoiler_text) {
-						todo = g_strdup_printf(
-							"cw %s" FS
-							"%s %s",
-							ms->spoiler_text,
-							mastodon_visibility(ms->visibility), ms->content);
-					} else {
-						todo = g_strdup_printf(
-							"%s %s",
-							mastodon_visibility(ms->visibility), ms->content);
-					}
+					g_string_append(todo, "cw" FS);
 				}
 
-				mastodon_do(ic, todo, undo);
+				if (mastodon_default_visibility(ic) != ms->visibility) {
+					g_string_append_printf(todo, "visibility %s" FS, mastodon_visibility(ms->visibility));
+				} else {
+					g_string_append(todo, "visibility" FS);
+				}
+
+				if (ms->reply_to) {
+					g_string_append_printf(todo, "reply %" G_GUINT64_FORMAT " ", ms->reply_to);
+				} else {
+					g_string_append(todo, "post ");
+				}
+				g_string_append(todo, ms->content);
+
+				mastodon_do(ic, todo->str, undo);
+
+				g_string_free(todo, FALSE); /* data is kept by mastodon_do! */
 
 			} else {
 				char *s = g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id);

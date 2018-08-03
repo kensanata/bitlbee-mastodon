@@ -103,9 +103,10 @@ This is the text to flag sensitive content with. The default is Not Safe For Wor
 
 This is the default visibility of your toots. There are three valid options: "public" (everybody can see your toots), "unlisted" (everybody can see your toots but they are not found on the public timelines), and "private" (only followers can see them). For more information see https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/User-guide.md#toot-privacy. This is used whenever you make a new post. You can override this visibility for new posts. See *[post](#post)* for more.
 
-Example:
+> **&lt;kensanata&gt;** account mastodon set visibility private  
+> **&lt;kensanata&gt;** save  
 
-> **&lt;kensanata&gt;** private Good morning, fellow mastodonts!  
+Don't forget to save your settings.
 
 ## account add mastodon
 > **Syntax:** account add mastodon &lt;handle&gt;  
@@ -168,7 +169,19 @@ The default **commands** setting is **true**. This means that anything you type 
 
 Use **help set commands** in your Bitlbee control channel (**&bitlbee**) to read up on the various commands.
 
-When posting like this, new posts the default visibility: "public". See **help set visibility** for more. You can change the visibility of a new toot by using one of the following commands instead of **post**: **public**, **unlisted**, **private**, or **direct** (only mentioned users can see it).
+New posts get the default visibility: "public". See **help set visibility** for more. You can change the visibility of the next toot by using the **visibility** command.
+
+> **&lt;kensanata&gt;** visibility unlisted  
+> **&lt;root&gt;** Next post is unlisted  
+> **&lt;kensanata&gt;** Hello!  
+> **&lt;root&gt;** You, unlisted: [06] Hello!  
+
+Use **cw &lt;content warning&gt;** to set a content warning for your next reply or post.
+
+> **&lt;kensanata&gt;** cw capitalism  
+> **&lt;root&gt;** Next post will get content warning 'capitalism'  
+> **&lt;kensanata&gt;** No! Just no!  
+> **&lt;root&gt;** You: [09] [CW: capitalism] \*NSFW\* No! Just no!  
 
 When mentioning people in your toots, make sure to qualify them appropriately. Example:
 
@@ -177,8 +190,6 @@ When mentioning people in your toots, make sure to qualify them appropriately. E
 By default the Mastodon server limits your toots to 500 characters. Bitlbee tries to compute the message length based on the various Mastodon rules and prevents you from posting longer messages. Use **help set message_length** in your Bitlbee control channel (**&bitlbee**) to read up on the hairy details. Basically, some aspects of of your message will count for less: URLs, domain names for mentioned user accounts and the like. See **help set target_url_length** for more information on how URLs are counted.
 
 Note also that Bitlbee itself does word-wrapping to limit messages to 425 characters. That is why longer messages may look like extra newlines have been introduced but if you check the status on the web, you'll see that everything is OK.
-
-Use **cw &lt;content warning&gt;** to set a content warning for your next reply or post.
 
 ## undo
 Use **undo** and **redo** to undo and redo recent commands. Bitlbee will remember your last 10 Mastodon commands and allows you to undo and redo them.
@@ -204,7 +215,7 @@ You can also reply to an earlier message by referring to its id using the **repl
 
 If you set the **commands** setting to **strict**, using the **reply** command is mandatory.
 
-When replying to a post, your reply uses the same visibility as the original toot unless your default visibility is more restricted: direct &gt; private &gt; unlisted &gt; public. See **help set visibility** for more.
+When replying to a post, your reply uses the same visibility as the original toot unless your default visibility is more restricted: direct &gt; private &gt; unlisted &gt; public. See **help set visibility** for more. You can set a different visibility using the **visibility** command. See *[post](#post)* for more.
 
 When replying to a post, your reply uses the same content warning unless you have set up a different one via **cw**. See *[post](#post)* for more.
 
