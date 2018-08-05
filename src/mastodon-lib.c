@@ -2377,7 +2377,7 @@ static void mastodon_string_append(gchar *data, GString *user_data)
  */
 GString *mastodon_string_join(GSList *l, gchar *init)
 {
-	if (!l) return NULL;
+	if (!l && !init) return NULL;
 	GString *s = g_string_new(NULL);
 	if (init) {
 		g_string_append(s, "@");
