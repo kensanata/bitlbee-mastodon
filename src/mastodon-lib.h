@@ -129,6 +129,6 @@ void mastodon_account_lists(struct im_connection *ic, guint64 id);
 void mastodon_list(struct im_connection *ic, guint64 id);
 void mastodon_list_create(struct im_connection *ic, char *title);
 void mastodon_list_update(struct im_connection *ic, guint64 id, char *title);
-void mastodon_list_delete(struct im_connection *ic, char *title);
+void mastodon_unknown_list_delete(struct im_connection *ic, char *title);
 void mastodon_list_add_accounts(struct im_connection *ic, guint64 id, ...);
 void mastodon_list_remove_accounts(struct im_connection *ic, guint64 id, ...);

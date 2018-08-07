@@ -1517,7 +1517,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			if (!cmd[2]) {
 				mastodon_log(ic, "Which list should be deleted? Use 'list' to find out.");
 			} else {
-				mastodon_list_delete(ic, message + 12); // "list delete %s"
+				mastodon_unknown_list_delete(ic, message + 12); // "list delete %s"
 			}
 		} else {
 			mastodon_log(ic, "This list command is, like, totally wrong.");
