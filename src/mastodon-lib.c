@@ -3260,13 +3260,26 @@ success:
 }
 
 /**
- * This is part of the first callback. We have the list id in mc->id! Now let's find all the accounts in the list in
- * order to prepare the undo command. Undo is serious business.
+ * This is part of the first callback. We have the list id in mc->id! If this is a new command, we want to find all the
+ * accounts in the list in order to prepare the undo command. Undo is serious business. If this command is not new, in
+ * other words, this is a redo command, then we can skip right ahead and go for the list delete.
  */
 void mastodon_list_delete(struct im_connection *ic, struct mastodon_command *mc) {
-	char *url = g_strdup_printf(MASTODON_LIST_ACCOUNTS_URL, mc->id);
-	mastodon_http(ic, url, mastodon_http_list_delete2, mc, HTTP_GET, NULL, 0);
-	g_free(url);
+	struct mastodon_data *md = ic->proto_data;
+
+	if (md->undo_type == MASTODON_NEW) {
+		/* Make sure we get all the accounts for undo. The API documentation says: If you specify limit=0 in the query,
+		 * all accounts will be returned without pagination. */
+		char *args[2] = { "limit", "0",	};
+		char *url = g_strdup_printf(MASTODON_LIST_ACCOUNTS_URL, mc->id);
+		mastodon_http(ic, url, mastodon_http_list_delete2, mc, HTTP_GET, args, 2);
+		g_free(url);
+	} else {
+		/* This is a short cut! */
+		char *url = g_strdup_printf(MASTODON_LIST_DATA_URL, mc->id);
+		mastodon_http(ic, url, mastodon_http_callback_and_ack, mc, HTTP_DELETE, NULL, 0);
+		g_free(url);
+	}
 }
 
 /**
