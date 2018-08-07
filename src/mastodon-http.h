@@ -30,6 +30,7 @@
 typedef enum {
 	HTTP_GET,
 	HTTP_POST,
+	HTTP_PUT,
 	HTTP_DELETE,
 } http_method_t;
 

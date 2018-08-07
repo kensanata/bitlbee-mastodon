@@ -79,6 +79,9 @@ struct http_request *mastodon_http(struct im_connection *ic, char *url_string, h
 	case HTTP_GET:
 		request_method = "GET";
 		break;
+	case HTTP_PUT:
+		request_method = "PUT";
+		break;
 	case HTTP_POST:
 		request_method = "POST";
 		break;
