@@ -3108,16 +3108,6 @@ void mastodon_lists(struct im_connection *ic) {
 }
 
 /**
- * Retrieving lists by membership. Returns at most 50 Lists without pagination.
- */
-void mastodon_account_lists(struct im_connection *ic, guint64 id);
-
-/**
- * Retrieving accounts in a list. If you specify limit=0 in the query, all accounts will be returned without pagination.
- */
-void mastodon_list_accounts(struct im_connection *ic, guint64 id);
-
-/**
  * Create a list.
  */
 void mastodon_list_create(struct im_connection *ic, char *title) {
@@ -3172,12 +3162,13 @@ void mastodon_chained_list(struct http_request *req, mastodon_chained_command_fu
 	}
 
 	if (parsed->type != json_array || parsed->u.array.length == 0) {
-		mastodon_log(ic, "You seem to have no lists defined.");
+		mastodon_log(ic, "You seem to have no lists defined. "
+					 "Create one using 'list create <title>'.");
 		goto finish;
 	}
 
 	int i;
-	guint64 id;
+	guint64 id = 0;
 	char *title = mc->str;
 
 	for (i = 0; i < parsed->u.array.length; i++) {
@@ -3192,7 +3183,8 @@ void mastodon_chained_list(struct http_request *req, mastodon_chained_command_fu
 	}
 
 	if (!id) {
-		mastodon_log(ic, "There is no list called '%s'", title);
+		mastodon_log(ic, "There is no list called '%s'. "
+					 "Use 'list' to show existing lists.", title);
 		goto finish;
 	} else {
 		mc->id = id;
@@ -3205,6 +3197,90 @@ finish:
 	mc_free(mc);
 success:
 	json_value_free(parsed);
+}
+
+/**
+ * Wrapper which sets up the first callback for functions acting on a list. For every command, the list has to be
+ * searched, first. The callback you provide must used mastodon_chained_list() to extract the list id and then call the
+ * reall callback.
+ */
+void mastodon_with_named_list(struct im_connection *ic, struct mastodon_command *mc, http_input_function func) {
+	mastodon_http(ic, MASTODON_LIST_URL, func, mc, HTTP_GET, NULL, 0);
+}
+
+/**
+ * Second callback for the list of accounts.
+ */
+void mastodon_http_list_accounts2(struct http_request *req) {
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+
+	if (!g_slist_find(mastodon_connections, ic)) {
+		goto finish;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		goto finish;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "There are no members in this list. Your options:\n"
+					 "Delete it using 'list delete %s'\n"
+					 "Add members using 'list add <nick> to %s'",
+					 mc->str, mc->str);
+	} else {
+		int i;
+		GString *m = g_string_new("Members:");
+
+		for (i = 0; i < parsed->u.array.length; i++) {
+
+			struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[i]);
+
+			if (ma) {
+				g_string_append(m, " ");
+				g_string_append(m, ma->acct);
+				ma_free(ma);
+			}
+		}
+		mastodon_log(ic, m->str);
+		g_string_free(m, TRUE);
+	}
+finish:
+	mc_free(mc);
+	json_value_free(parsed);
+}
+
+
+/**
+ * Part two of the first callback: now we have mc->id. Call the URL which will give us the accounts themselves. The API
+ * documentation says: If you specify limit=0 in the query, all accounts will be returned without pagination.
+ */
+void mastodon_list_accounts(struct im_connection *ic, struct mastodon_command *mc) {
+	char *args[2] = { "limit", "0",	};
+	char *url = g_strdup_printf(MASTODON_LIST_ACCOUNTS_URL, mc->id);
+	mastodon_http(ic, url, mastodon_http_list_accounts2, mc, HTTP_GET, args, 2);
+	g_free(url);
+}
+
+/**
+ * First callback for listing the accounts in a list. First, get the list id from the data we received, then call the
+ * next function.
+ */
+void mastodon_http_list_accounts(struct http_request *req) {
+	mastodon_chained_list(req, mastodon_list_accounts);
+}
+
+/**
+ * Show accounts in a list.
+ */
+void mastodon_unknown_list_accounts(struct im_connection *ic, char *title) {
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+	mc->str = g_strdup(title);
+	mastodon_with_named_list(ic, mc, mastodon_http_list_accounts);
 }
 
 /**
@@ -3289,15 +3365,6 @@ void mastodon_list_delete(struct im_connection *ic, struct mastodon_command *mc)
  */
 void mastodon_http_list_delete(struct http_request *req) {
 	mastodon_chained_list(req, mastodon_list_delete);
-}
-
-/**
- * Wrapper which sets up the first callback for functions acting on a list. For every command, the list has to be
- * searched, first. The callback you provide must used mastodon_chained_list() to extract the list id and then call the
- * reall callback.
- */
-void mastodon_with_named_list(struct im_connection *ic, struct mastodon_command *mc, http_input_function func) {
-	mastodon_http(ic, MASTODON_LIST_URL, func, mc, HTTP_GET, NULL, 0);
 }
 
 /**

@@ -1520,7 +1520,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 				mastodon_unknown_list_delete(ic, message + 12); // "list delete %s"
 			}
 		} else {
-			mastodon_log(ic, "This list command is, like, totally wrong.");
+			mastodon_unknown_list_accounts(ic, cmd[1]);
 		}
 	} else if (g_ascii_strcasecmp(cmd[0], "reply") == 0) {
 		if (!cmd[1] || !cmd[2]) {
