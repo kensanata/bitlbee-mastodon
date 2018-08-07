@@ -2322,6 +2322,23 @@ void mastodon_status(struct im_connection *ic, guint64 id)
 }
 
 /**
+ * Allow the user to make a raw request.
+ */
+void mastodon_raw(struct im_connection *ic, char *method, char *url) {
+	http_method_t m;
+	if (g_ascii_strcasecmp(method, "get") == 0) {
+		m = HTTP_GET;
+	} else if (g_ascii_strcasecmp(method, "put") == 0) {
+		m = HTTP_PUT;
+	} else if (g_ascii_strcasecmp(method, "post") == 0) {
+		m = HTTP_POST;
+	} else if (g_ascii_strcasecmp(method, "delete") == 0) {
+		m = HTTP_DELETE;
+	}
+	mastodon_http(ic, url, mastodon_http_log_all, ic, m, NULL, 0);
+}
+
+/**
  * Callback for showing the URL of a status.
  */
 static void mastodon_http_status_show_url(struct http_request *req)

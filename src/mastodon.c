@@ -1272,13 +1272,19 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 				     "- info instance\n"
 				     "- info [id|screenname]\n"
 				     "- info user [nick|account]\n"
-				     "- info relation [nick|account]");
+				     "- info relation [nick|account]\n"
+				     "- info [get|put|post|delete] url [args]");
 		} else if (g_ascii_strcasecmp(cmd[1], "instance") == 0) {
 			mastodon_instance(ic);
 		} else if (g_ascii_strcasecmp(cmd[1], "user") == 0 && cmd[2]) {
 			mastodon_user(ic, cmd[2]);
 		} else if (g_ascii_strcasecmp(cmd[1], "relation") == 0 && cmd[2]) {
 			mastodon_relation_to_user(ic, cmd[2]);
+		} else if ((g_ascii_strcasecmp(cmd[1], "get") == 0 ||
+					g_ascii_strcasecmp(cmd[1], "put") == 0 ||
+					g_ascii_strcasecmp(cmd[1], "post") == 0 ||
+					g_ascii_strcasecmp(cmd[1], "delete") == 0) && cmd[2]) {
+			mastodon_raw(ic, cmd[1], cmd[2]);
 		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_status(ic, id);
 		}

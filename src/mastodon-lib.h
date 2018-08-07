@@ -107,6 +107,7 @@ void mastodon_instance(struct im_connection *ic);
 void mastodon_account(struct im_connection *ic, guint64 id);
 void mastodon_search_account(struct im_connection *ic, char *who);
 void mastodon_status(struct im_connection *ic, guint64 id);
+void mastodon_raw(struct im_connection *ic, char *method, char *url);
 void mastodon_relationship(struct im_connection *ic, guint64 id);
 void mastodon_search_relationship(struct im_connection *ic, char *who);
 void mastodon_search(struct im_connection *ic, char *what);
