@@ -108,6 +108,7 @@ struct mastodon_report {
 struct mastodon_command {
 	struct im_connection *ic;
 	guint64 id;
+	char *str;
 	char *undo;
 	char *redo;
 	mastodon_command_type_t command;
@@ -226,6 +227,7 @@ static void mc_free(struct mastodon_command *mc)
 		return;
 	}
 
+	g_free(mc->str);
 	g_free(mc->undo);
 	g_free(mc->redo);
 	g_free(mc);
