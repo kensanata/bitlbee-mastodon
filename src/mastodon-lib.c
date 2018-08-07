@@ -1672,6 +1672,8 @@ static void mastodon_http_callback(struct http_request *req)
 	case MC_STATUS_UNMUTE:
 	case MC_BOOST:
 	case MC_UNBOOST:
+	case MC_LIST_CREATE:
+	case MC_LIST_DELETE:
 	case MC_DELETE:
 		md->last_id = 0;
 		mastodon_do(ic, mc->redo, mc->undo);
@@ -1906,8 +1908,10 @@ void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type
 		case MC_UNKNOWN:
 		case MC_POST:
 		case MC_DELETE:
-			/* These commands have their own functions to call and
-			 * should not be calling mastodon_post. */
+		case MC_LIST_CREATE:
+		case MC_LIST_DELETE:
+			/* These commands should not be calling mastodon_post. Instead, call mastodon_post_status or whatever else
+			 * is required. */
 			break;
 		case MC_FOLLOW:
 			mc->redo = g_strdup_printf("follow %" G_GUINT64_FORMAT, id);
@@ -3053,6 +3057,230 @@ void mastodon_following(struct im_connection *ic)
 	mastodon_http(ic, url, mastodon_http_following, ic, HTTP_GET, NULL, 0);
 	g_free(url);
 }
+
+/**
+ * Callback for the list of lists.
+ */
+void mastodon_http_lists(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		return;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "Use 'list create <name>' to create a list.");
+		goto finish;
+	}
+
+	int i;
+	GString *s = g_string_new(g_strdup_printf("Lists: "));
+	gboolean first = TRUE;
+	for (i = 0; i < parsed->u.array.length; i++) {
+			json_value *a = parsed->u.array.values[i];
+			if (a->type == json_object) {
+				if (first) {
+					first = FALSE;
+				} else {
+					g_string_append(s, "; ");
+				}
+				g_string_append(s, json_o_str(a, "title"));
+			}
+	}
+	mastodon_log(ic, s->str);
+	g_string_free(s, TRUE);
+finish:
+	json_value_free(parsed);
+}
+
+/**
+ * Retrieving lists. Returns at most 50 Lists without pagination.
+ */
+void mastodon_lists(struct im_connection *ic) {
+	mastodon_http(ic, MASTODON_LIST_URL, mastodon_http_lists, ic, HTTP_GET, NULL, 0);
+}
+
+/**
+ * Retrieving lists by membership. Returns at most 50 Lists without pagination.
+ */
+void mastodon_account_lists(struct im_connection *ic, guint64 id);
+
+/**
+ * Retrieving accounts in a list. If you specify limit=0 in the query, all accounts will be returned without pagination.
+ */
+void mastodon_list_accounts(struct im_connection *ic, guint64 id);
+
+/**
+ * Create a list.
+ */
+void mastodon_list_create(struct im_connection *ic, char *title) {
+	struct mastodon_data *md = ic->proto_data;
+
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+
+	if (md->undo_type == MASTODON_NEW) {
+		mc->command = MC_LIST_CREATE;
+		mc->redo = g_strdup_printf("list create %s", title);
+		mc->undo = g_strdup_printf("list delete %s", title);
+	}
+
+	char *args[2] = {
+		"title", title,
+	};
+
+	mastodon_http(ic, MASTODON_LIST_URL, mastodon_http_callback_and_ack, mc, HTTP_POST, args, 2);
+}
+
+/**
+ * Rename a list.
+ */
+void mastodon_list_update(struct im_connection *ic, guint64 id, char *title);
+
+/**
+ * Second callback for list delete. We get back the accounts in the list we are about to delete. We need these to
+ * prepare the undo command. Undo is serious business. Then we delete the list.
+ */
+void mastodon_http_list_delete2(struct http_request *req) {
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+	struct mastodon_data *md = ic->proto_data;
+
+	if (!g_slist_find(mastodon_connections, ic)) {
+		goto finish;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		goto finish;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "There are no members in this list. Cool!");
+	} else if (md->undo_type == MASTODON_NEW) {
+		int i;
+		char *title = mc->str;
+		GString *undo = g_string_new(mc->undo);
+
+		for (i = 0; i < parsed->u.array.length; i++) {
+
+			struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[i]);
+
+			if (ma) {
+				g_string_append(undo, FS);
+				g_string_append_printf(undo, "list add %s to %s", ma->acct, title);
+			}
+			ma_free(ma);
+		}
+
+		g_free(mc->undo); mc->undo = undo->str; // adopt
+		g_string_free(undo, FALSE);
+	}
+
+	char *url = g_strdup_printf(MASTODON_LIST_DATA_URL, mc->id);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, mc, HTTP_DELETE, NULL, 0);
+	g_free(url);
+	goto success;
+finish:
+	mc_free(mc);
+success:
+	json_value_free(parsed);
+}
+
+/**
+ * Callback for list delete. We get back the lists we know about and need to find the list to delete. Once we have it,
+ * we use another callback to get the list of all its members in order to prepare the undo command. Undo is serious
+ * business.
+ */
+void mastodon_http_list_delete(struct http_request *req) {
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+
+	if (!g_slist_find(mastodon_connections, ic)) {
+		goto finish;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		goto finish;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "There are no lists for you to delete. You're good.");
+		goto finish;
+	}
+
+	int i;
+	guint64 id;
+	char *title = mc->str;
+
+	for (i = 0; i < parsed->u.array.length; i++) {
+			json_value *a = parsed->u.array.values[i];
+			json_value *it;
+			if (a->type == json_object &&
+				(it = json_o_get(a, "id")) &&
+				g_strcmp0(title, json_o_str(a, "title")) == 0) {
+				id = mastodon_json_int64(it);
+				break;
+			}
+	}
+
+	if (!id) {
+		mastodon_log(ic, "There is no list called %s.", title);
+		goto finish;
+	} else {
+		struct mastodon_data *md = ic->proto_data;
+		mc->id = id;
+		if (md->undo_type == MASTODON_NEW) {
+			mc->undo = g_strdup_printf("list create %s", title);
+		}
+		char *url = g_strdup_printf(MASTODON_LIST_ACCOUNTS_URL, id);
+		mastodon_http(ic, url, mastodon_http_list_delete2, mc, HTTP_GET, NULL, 0);
+		goto success;
+	}
+
+finish:
+	/* If successful, we need to keep mc for one more request. */
+	mc_free(mc);
+success:
+	json_value_free(parsed);
+}
+
+/**
+ * Delete a list by title. Note that list titles are case-sensitive.
+ */
+void mastodon_list_delete(struct im_connection *ic, char *title) {
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+	mc->str = g_strdup(title);
+	struct mastodon_data *md = ic->proto_data;
+	if (md->undo_type == MASTODON_NEW) {
+		mc->command = MC_LIST_DELETE;
+		mc->redo = g_strdup_printf("list delete %s", title);
+	}
+	mastodon_http(ic, MASTODON_LIST_URL, mastodon_http_list_delete, mc, HTTP_GET, NULL, 0);
+};
+
+/**
+ * Add one or more accounts to a list.
+ */
+void mastodon_list_add_accounts(struct im_connection *ic, guint64 id, ...);
+
+/**
+ * Remove one or more accounts from a list.
+ */
+void mastodon_list_remove_accounts(struct im_connection *ic, guint64 id, ...);
 
 /**
  * Callback for getting your own account. This saves the account_id.

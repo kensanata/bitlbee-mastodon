@@ -1504,6 +1504,24 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		} else {
 			mastodon_log(ic, "More of what? Use the timeline command, first.");
 		}
+	} else if (g_ascii_strcasecmp(cmd[0], "list") == 0) {
+		if (!cmd[1]) {
+			mastodon_lists(ic);
+		} else if (g_ascii_strcasecmp(cmd[1], "create") == 0) {
+			if (!cmd[2]) {
+				mastodon_log(ic, "You forgot the title of the new list!");
+			} else {
+				mastodon_list_create(ic, message + 12); // "list create %s"
+			}
+		} else if (g_ascii_strcasecmp(cmd[1], "delete") == 0) {
+			if (!cmd[2]) {
+				mastodon_log(ic, "Which list should be deleted? Use 'list' to find out.");
+			} else {
+				mastodon_list_delete(ic, message + 12); // "list delete %s"
+			}
+		} else {
+			mastodon_log(ic, "This list command is, like, totally wrong.");
+		}
 	} else if (g_ascii_strcasecmp(cmd[0], "reply") == 0) {
 		if (!cmd[1] || !cmd[2]) {
 			mastodon_log(ic, "Sorry, what? Please provide a log number or nick, and your reply.");

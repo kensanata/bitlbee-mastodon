@@ -70,6 +70,11 @@
 #define MASTODON_ACCOUNT_UNFOLLOW_URL "/accounts/%" G_GINT64_FORMAT "/unfollow"
 #define MASTODON_ACCOUNT_MUTE_URL "/accounts/%" G_GINT64_FORMAT "/mute"
 #define MASTODON_ACCOUNT_UNMUTE_URL "/accounts/%" G_GINT64_FORMAT "/unmute"
+#define MASTODON_ACCOUNT_LISTS "/accounts/%" G_GINT64_FORMAT "/lists"
+
+#define MASTODON_LIST_URL "/lists"
+#define MASTODON_LIST_DATA_URL "/lists/%" G_GINT64_FORMAT
+#define MASTODON_LIST_ACCOUNTS_URL "/lists/%" G_GINT64_FORMAT "/accounts"
 
 #define MASTODON_ACCOUNT_RELATIONSHIP_URL "/accounts/relationships"
 
@@ -119,3 +124,11 @@ void mastodon_account_pinned_statuses(struct im_connection *ic, guint64 id);
 void mastodon_unknown_account_pinned_statuses(struct im_connection *ic, char *who);
 void mastodon_account_bio(struct im_connection *ic, guint64 id);
 void mastodon_unknown_account_bio(struct im_connection *ic, char *who);
+void mastodon_lists(struct im_connection *ic);
+void mastodon_account_lists(struct im_connection *ic, guint64 id);
+void mastodon_list(struct im_connection *ic, guint64 id);
+void mastodon_list_create(struct im_connection *ic, char *title);
+void mastodon_list_update(struct im_connection *ic, guint64 id, char *title);
+void mastodon_list_delete(struct im_connection *ic, char *title);
+void mastodon_list_add_accounts(struct im_connection *ic, guint64 id, ...);
+void mastodon_list_remove_accounts(struct im_connection *ic, guint64 id, ...);
