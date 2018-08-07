@@ -1579,10 +1579,9 @@ char *mastodon_visibility(mastodon_visibility_t visibility)
 }
 
 /**
- * Generic callback to use after sending a POST request to mastodon
- * when the reply doesn't have any information we need. All we care
- * about are errors. If got here, there was no error, so tell the user
- * that everything went fine. Store some information for later use.
+ * Generic callback to use after sending a POST request to mastodon when the reply doesn't have any information we need.
+ * All we care about are errors. If got here, there was no error. If you want to tell the user that everything went
+ * fine, call mastodon_http_callback_and_ack instead. This command also stores some information for later use.
  */
 static void mastodon_http_callback(struct http_request *req)
 {
@@ -1685,8 +1684,8 @@ static void mastodon_http_callback(struct http_request *req)
 }
 
 /**
- * Call the generic callback function and print an acknowledgement for
- * the user.
+ * Call the generic callback function and print an acknowledgement for the user.
+ * Commands should use mastodon_post instead.
  */
 static void mastodon_http_callback_and_ack(struct http_request *req)
 {
@@ -1891,9 +1890,8 @@ void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_
 }
 
 /**
- * Generic POST request taking a numeric ID. The format string must
- * contain one placeholder for the ID, like "/accounts/%"
- * G_GINT64_FORMAT "/mute".
+ * Generic POST request taking a numeric ID. The format string must contain one placeholder for the ID, like
+ * "/accounts/%" G_GINT64_FORMAT "/mute".
  */
 void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type_t command, guint64 id)
 {
@@ -2223,6 +2221,9 @@ void mastodon_instance(struct im_connection *ic)
 	mastodon_http(ic, MASTODON_INSTANCE_URL, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
 }
 
+/**
+ * Show information about an account.
+ */
 void mastodon_account(struct im_connection *ic, guint64 id)
 {
 	char *url = g_strdup_printf(MASTODON_ACCOUNT_URL, id);
