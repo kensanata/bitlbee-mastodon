@@ -782,16 +782,21 @@ static struct groupchat *mastodon_chat_join(struct im_connection *ic,
 	struct groupchat *c = imcb_chat_new(ic, topic);
 	imcb_chat_topic(c, NULL, topic, 0);
 	imcb_chat_add_buddy(c, ic->acc->user);
-	struct http_request *req;
+	struct http_request *req = NULL;
 	if (strcmp(topic, "local") == 0) {
 		mastodon_local_timeline(ic);
 		req = mastodon_open_local_stream(ic);
 	} else if (strcmp(topic, "federated") == 0) {
 		mastodon_federated_timeline(ic);
 		req = mastodon_open_federated_stream(ic);
-	} else {
+	} else if (*topic == '#') {
 		mastodon_hashtag_timeline(ic, topic);
 		req = mastodon_open_hashtag_stream(ic, topic);
+	} else {
+		/* Unfortunately, this will search twice for a list matchig topic. In addition to that, as we need to identify
+		 * the list we're going to stream, we cannot return a request from here. Instead, pass the channel along. */
+		mastodon_unknown_list_timeline(ic, topic);
+		mastodon_open_unknown_list_stream(ic, c, topic);
 	}
 	g_free(topic);
 	c->data = req;
@@ -1265,7 +1270,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		/* Not supporting commands if "commands" is set to true/strict. */
 	} else if (g_ascii_strcasecmp(cmd[0], "help") == 0) {
 		/* For unsupported undo and redo commands. */
-		mastodon_log(ic, "Please use 'help mastodon' in the control channel, &bitlbee.");
+		mastodon_log(ic, "Please use help mastodon in the control channel, &bitlbee.");
 	} else if (g_ascii_strcasecmp(cmd[0], "info") == 0) {
 		if (!cmd[1]) {
 			mastodon_log(ic, "Usage:\n"
@@ -1326,7 +1331,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		} else if (cmd[1] == NULL) {
 			mastodon_history(ic, FALSE);
 		} else {
-			mastodon_log(ic, "History only takes the optional 'undo' argument.");
+			mastodon_log(ic, "History only takes the optional undo argument.");
 		}
 	} else if (g_ascii_strcasecmp(cmd[0], "del") == 0 ||
 		   g_ascii_strcasecmp(cmd[0], "delete") == 0) {
@@ -1488,7 +1493,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		} else if (strcmp(cmd[1], "federated") == 0) {
 			mastodon_federated_timeline(ic);
 		} else {
-			mastodon_unknown_account_statuses(ic, cmd[1]);
+			mastodon_unknown_list_timeline(ic, message + 9); // "timeline %s"
 		}
 	} else if (g_ascii_strcasecmp(cmd[0], "notifications") == 0) {
 		if (cmd[1] == NULL) {
@@ -1515,7 +1520,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			mastodon_unknown_account_bio(ic, cmd[1]);
 		}
 	} else if (g_ascii_strcasecmp(cmd[0], "more") == 0) {
-		if (!cmd[1]) {
+		if (cmd[1]) {
 			mastodon_log(ic, "More takes no arguments.");
 		} else if (md->next_url) {
 			mastodon_more(ic);
@@ -1533,7 +1538,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			}
 		} else if (g_ascii_strcasecmp(cmd[1], "delete") == 0) {
 			if (!cmd[2]) {
-				mastodon_log(ic, "Which list should be deleted? Use 'list' to find out.");
+				mastodon_log(ic, "Which list should be deleted? Use list to find out.");
 			} else {
 				mastodon_unknown_list_delete(ic, message + 12); // "list delete %s"
 			}
@@ -1542,7 +1547,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			if (args[0] && args[1] && (id = mastodon_user_id_or_warn(ic, args[0]))) {
 				mastodon_unknown_list_add_account(ic, id, args[1]);
 			} else {
-				mastodon_log(ic, "I am confused. Please use 'list add <nick> to <list>'.");
+				mastodon_log(ic, "I am confused. Please use list add <nick> to <list>.");
 			}
 			g_strfreev(args);
 		} else if (g_ascii_strcasecmp(cmd[1], "remove") == 0) {
@@ -1550,7 +1555,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			if (args[0] && args[1] && (id = mastodon_user_id_or_warn(ic, args[0]))) {
 				mastodon_unknown_list_remove_account(ic, id, args[1]);
 			} else {
-				mastodon_log(ic, "I need to what to do! Use 'list remove <nick> from <list>'.");
+				mastodon_log(ic, "I need to what to do! Use list remove <nick> from <list>.");
 			}
 			g_strfreev(args);
 		} else {

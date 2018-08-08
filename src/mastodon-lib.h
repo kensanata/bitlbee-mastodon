@@ -38,9 +38,11 @@
 #define MASTODON_STREAMING_HASHTAG_URL "/streaming/hashtag"
 #define MASTODON_STREAMING_LOCAL_URL "/streaming/public/local"
 #define MASTODON_STREAMING_FEDERATED_URL "/streaming/public"
+#define MASTODON_STREAMING_LIST_URL "/streaming/list"
 #define MASTODON_HOME_TIMELINE_URL "/timelines/home"
 #define MASTODON_PUBLIC_TIMELINE_URL "/timelines/public"
 #define MASTODON_HASHTAG_TIMELINE_URL "/timelines/tag/%s"
+#define MASTODON_LIST_TIMELINE_URL "/timelines/list/%" G_GINT64_FORMAT
 #define MASTODON_NOTIFICATIONS_URL "/notifications"
 
 #define MASTODON_REPORT_URL "/reports"
@@ -93,9 +95,11 @@ void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag);
 void mastodon_local_timeline(struct im_connection *ic);
 void mastodon_federated_timeline(struct im_connection *ic);
 void mastodon_open_user_stream(struct im_connection *ic);
+void mastodon_unknown_list_timeline(struct im_connection *ic, char *title);
 struct http_request *mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag);
 struct http_request *mastodon_open_local_stream(struct im_connection *ic);
 struct http_request *mastodon_open_federated_stream(struct im_connection *ic);
+void mastodon_open_unknown_list_stream(struct im_connection *ic, struct groupchat *c, char *title);
 mastodon_visibility_t mastodon_default_visibility(struct im_connection *ic);
 mastodon_visibility_t mastodon_parse_visibility(char *value);
 char *mastodon_visibility(mastodon_visibility_t visibility);

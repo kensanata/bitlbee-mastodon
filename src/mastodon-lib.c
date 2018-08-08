@@ -48,6 +48,7 @@ typedef enum {
 	MT_LOCAL,
 	MT_FEDERATED,
 	MT_HASHTAG,
+	MT_LIST,
 } mastodon_timeline_type_t;
 
 typedef enum {
@@ -112,6 +113,7 @@ struct mastodon_command {
 	char *str;
 	char *undo;
 	char *redo;
+	struct groupchat *c;
 	mastodon_command_type_t command;
 };
 
@@ -220,7 +222,7 @@ static void mr_free(struct mastodon_report *mr)
 }
 
 /**
- * Frees a mastodon_command struct.
+ * Frees a mastodon_command struct. Note that the groupchat c doesn't need to be freed. It is maintained elsewhere.
  */
 static void mc_free(struct mastodon_command *mc)
 {
@@ -414,6 +416,81 @@ mastodon_visibility_t mastodon_parse_visibility(char *value)
 	} else {
 		return MV_UNKNOWN;
 	}
+}
+
+/**
+ * Here, we have a similar setup as for mastodon_chained_account_function. The flow is as follows: the
+ * mastodon_command_handler() calls mastodon_unknown_list_delete(). This sets up the mastodon_command (mc). It then
+ * calls mastodon_with_named_list() and passes along a callback, mastodon_http_list_delete(). It uses
+ * mastodon_chained_list() to extract the list id and store it in mc, and calls the next handler,
+ * mastodon_list_delete(). This is a mastodon_chained_command_function! It doesn't have to check whether ic is live.
+ */
+typedef void (*mastodon_chained_command_function)(struct im_connection *ic, struct mastodon_command *mc);
+
+/**
+ * This is the wrapper around callbacks that need to search for the list id in a list result. Note that list titles are
+ * case-sensitive.
+ */
+static void mastodon_chained_list(struct http_request *req, mastodon_chained_command_function func) {
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+
+	if (!g_slist_find(mastodon_connections, ic)) {
+		goto finish;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		goto finish;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "You seem to have no lists defined. "
+					 "Create one using 'list create <title>'.");
+		goto finish;
+	}
+
+	int i;
+	guint64 id = 0;
+	char *title = mc->str;
+
+	for (i = 0; i < parsed->u.array.length; i++) {
+			json_value *a = parsed->u.array.values[i];
+			json_value *it;
+			if (a->type == json_object &&
+				(it = json_o_get(a, "id")) &&
+				g_strcmp0(title, json_o_str(a, "title")) == 0) {
+				id = mastodon_json_int64(it);
+				break;
+			}
+	}
+
+	if (!id) {
+		mastodon_log(ic, "There is no list called '%s'. "
+					 "Use 'list' to show existing lists.", title);
+		goto finish;
+	} else {
+		mc->id = id;
+		func(ic, mc);
+		goto success;
+	}
+
+finish:
+	/* If successful, we need to keep mc for one more request. */
+	mc_free(mc);
+success:
+	json_value_free(parsed);
+}
+
+/**
+ * Wrapper which sets up the first callback for functions acting on a list. For every command, the list has to be
+ * searched, first. The callback you provide must used mastodon_chained_list() to extract the list id and then call the
+ * reall callback.
+ */
+void mastodon_with_named_list(struct im_connection *ic, struct mastodon_command *mc, http_input_function func) {
+	mastodon_http(ic, MASTODON_LIST_URL, func, mc, HTTP_GET, NULL, 0);
 }
 
 /**
@@ -839,6 +916,11 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 
 	switch (status->subscription) {
 
+	case MT_LIST:
+		// Add the status to existing group chats with a topic matching any the lists this user is part of
+		// FIXME
+		break;
+
 	case MT_HASHTAG:
 		// Add the status to any other existing group chats whose title matches one of the tags.
 		for (l = status->tags; l; l = l->next) {
@@ -1189,6 +1271,14 @@ static void mastodon_http_stream_federated(struct http_request *req)
 	mastodon_http_stream(req, MT_FEDERATED);
 }
 
+static void mastodon_http_stream_list(struct http_request *req)
+{
+	mastodon_http_stream(req, MT_LIST);
+}
+
+/**
+ * Make sure a request continues stream instead of closing.
+ */
 void mastodon_stream(struct im_connection *ic, struct http_request *req)
 {
 	struct mastodon_data *md = ic->proto_data;
@@ -1198,6 +1288,9 @@ void mastodon_stream(struct im_connection *ic, struct http_request *req)
 	}
 }
 
+/**
+ * Open the user (home) timeline.
+ */
 void mastodon_open_user_stream(struct im_connection *ic)
 {
 	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_USER_URL,
@@ -1205,6 +1298,9 @@ void mastodon_open_user_stream(struct im_connection *ic)
 	mastodon_stream(ic, req);
 }
 
+/**
+ * Open a stream for a hashtag timeline and return the request.
+ */
 struct http_request *mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag)
 {
 	char *args[2] = {
@@ -1217,6 +1313,41 @@ struct http_request *mastodon_open_hashtag_stream(struct im_connection *ic, char
 	return req;
 }
 
+/**
+ * Part two of the first callback: now we have mc->id. Now we're good to go.
+ */
+void mastodon_list_stream(struct im_connection *ic, struct mastodon_command *mc) {
+	char *args[2] = {
+		"list", g_strdup_printf("%" G_GINT64_FORMAT, mc->id),
+	};
+
+	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_LIST_URL,
+						 mastodon_http_stream_list, ic, HTTP_GET, args, 2);
+	mastodon_stream(ic, req);
+	// FIXME: assign this to c->req = req!
+}
+
+/**
+ * First callback to show the stream for a list. We need to parse the lists and find the one we're looking for, then
+ * make our next request with the list id.
+ */
+static void mastodon_http_list_stream(struct http_request *req)
+{
+	mastodon_chained_list(req, mastodon_list_stream);
+}
+
+void mastodon_open_unknown_list_stream(struct im_connection *ic, struct groupchat *c, char *title)
+{
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+	mc->c = c;
+	mc->str = g_strdup(title);
+	mastodon_with_named_list(ic, mc, mastodon_http_list_stream);
+}
+
+/**
+ * Open a stream for the local timeline and return the request.
+ */
 struct http_request *mastodon_open_local_stream(struct im_connection *ic)
 {
 	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_LOCAL_URL,
@@ -1225,6 +1356,9 @@ struct http_request *mastodon_open_local_stream(struct im_connection *ic)
 	return req;
 }
 
+/**
+ * Open a stream for the federated timeline and return the request.
+ */
 struct http_request *mastodon_open_federated_stream(struct im_connection *ic)
 {
 	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_FEDERATED_URL,
@@ -1270,7 +1404,8 @@ static void mastodon_handle_header(struct http_request *req, mastodon_more_t mor
 }
 
 /**
- * Handle a request whose response contains nothing but statuses.
+ * Handle a request whose response contains nothing but statuses. Note that we expect req->data to be an im_connection,
+ * not a mastodon_command (or NULL).
  */
 static void mastodon_http_timeline(struct http_request *req, mastodon_timeline_type_t subscription)
 {
@@ -1342,6 +1477,56 @@ static void mastodon_http_federated_timeline(struct http_request *req)
 void mastodon_federated_timeline(struct im_connection *ic)
 {
 	mastodon_http(ic, MASTODON_PUBLIC_TIMELINE_URL, mastodon_http_federated_timeline, ic, HTTP_GET, NULL, 0);
+}
+
+
+/**
+ * Second callback to show the timeline for a list. We finally got a list of statuses.
+ */
+static void mastodon_http_list_timeline2(struct http_request *req)
+{
+	/* We have used a mastodon_command (mc) all this time, but now it's time to forget about it and use an im_connection
+	 * (ic) instead. */
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+	req->data = ic;
+	mc_free(mc);
+	mastodon_http_timeline(req, MT_LIST);
+}
+
+/**
+ * Part two of the first callback to show the timeline for a list. In mc->id we have our list id.
+ */
+void mastodon_list_timeline(struct im_connection *ic, struct mastodon_command *mc) {
+	char *url = g_strdup_printf(MASTODON_LIST_TIMELINE_URL, mc->id);
+	mastodon_log(ic, "debug: mastodon_list_timeline %s", url);
+	mastodon_http(ic, url, mastodon_http_list_timeline2, mc, HTTP_GET, NULL, 0);
+	g_free(url);
+}
+
+/**
+ * First callback to show the timeline for a list. We need to parse the lists and find the one we're looking for, then
+ * make our next request with the list id.
+ */
+static void mastodon_http_list_timeline(struct http_request *req)
+{
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+	mastodon_log(ic, "debug: mastodon_http_list_timeline");
+	mastodon_chained_list(req, mastodon_list_timeline);
+}
+
+/**
+ * Timeline for a named list. This requires two callbacks: the first to find the list id, the second one to do the
+ * actual work.
+ */
+void mastodon_unknown_list_timeline(struct im_connection *ic, char *title)
+{
+	mastodon_log(ic, "debug: mastodon_unknown_list_timeline");
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+	mc->str = g_strdup(title);
+	mastodon_with_named_list(ic, mc, mastodon_http_list_timeline);
 }
 
 /**
@@ -3138,81 +3323,6 @@ void mastodon_list_create(struct im_connection *ic, char *title) {
  * Rename a list.
  */
 void mastodon_list_update(struct im_connection *ic, guint64 id, char *title);
-
-/**
- * Here, we have a similar setup as for mastodon_chained_account_function. The flow is as follows: the
- * mastodon_command_handler() calls mastodon_unknown_list_delete(). This sets up the mastodon_command (mc). It then
- * calls mastodon_with_named_list() and passes along a callback, mastodon_http_list_delete(). It uses
- * mastodon_chained_list() to extract the list id and store it in mc, and calls the next handler,
- * mastodon_list_delete(). This is a mastodon_chained_command_function! It doesn't have to check whether ic is live.
- */
-typedef void (*mastodon_chained_command_function)(struct im_connection *ic, struct mastodon_command *mc);
-
-/**
- * This is the wrapper around callbacks that need to search for the list id in a list result. Note that list titles are
- * case-sensitive.
- */
-void mastodon_chained_list(struct http_request *req, mastodon_chained_command_function func) {
-	struct mastodon_command *mc = req->data;
-	struct im_connection *ic = mc->ic;
-
-	if (!g_slist_find(mastodon_connections, ic)) {
-		goto finish;
-	}
-
-	json_value *parsed;
-	if (!(parsed = mastodon_parse_response(ic, req))) {
-		/* ic would have been freed in imc_logout in this situation */
-		ic = NULL;
-		goto finish;
-	}
-
-	if (parsed->type != json_array || parsed->u.array.length == 0) {
-		mastodon_log(ic, "You seem to have no lists defined. "
-					 "Create one using 'list create <title>'.");
-		goto finish;
-	}
-
-	int i;
-	guint64 id = 0;
-	char *title = mc->str;
-
-	for (i = 0; i < parsed->u.array.length; i++) {
-			json_value *a = parsed->u.array.values[i];
-			json_value *it;
-			if (a->type == json_object &&
-				(it = json_o_get(a, "id")) &&
-				g_strcmp0(title, json_o_str(a, "title")) == 0) {
-				id = mastodon_json_int64(it);
-				break;
-			}
-	}
-
-	if (!id) {
-		mastodon_log(ic, "There is no list called '%s'. "
-					 "Use 'list' to show existing lists.", title);
-		goto finish;
-	} else {
-		mc->id = id;
-		func(ic, mc);
-		goto success;
-	}
-
-finish:
-	/* If successful, we need to keep mc for one more request. */
-	mc_free(mc);
-success:
-	json_value_free(parsed);
-}
-
-/**
- * Wrapper which sets up the first callback for functions acting on a list. For every command, the list has to be
- * searched, first. The callback you provide must used mastodon_chained_list() to extract the list id and then call the
- * reall callback.
- */
-void mastodon_with_named_list(struct im_connection *ic, struct mastodon_command *mc, http_input_function func) {
-	mastodon_http(ic, MASTODON_LIST_URL, func, mc, HTTP_GET, NULL, 0);
-}
 
 /**
  * Second callback for the list of accounts.

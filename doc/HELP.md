@@ -22,6 +22,7 @@ Mastodon is a free, open-source social network server. A decentralized solution 
 * *[control](#control)* - Commands in the control channel
 * *[hashtag](#hashtag)* - Showing and following a hashtag
 * *[public](#public)* - Showing and following the local or federated timeline
+* *[lists](#lists)* - Managing lists
 * *[notifications](#notifications)* - Showing your notifications
 * *[set](#set)* - Settings affecting Mastodon accounts
 
@@ -152,7 +153,7 @@ Once you do that, your login should complete in the **&bitlbee** channel:
 
 You should now have a channel called **#mastodon.weaponsvsac.space@localhost** where all the status updates and notifications get shown. We'll call this your **account channel**. See **help set name** to change it's name.
 
-Mastodon gives BitlBee a permanent authentication token, which will be saved in your configuration.
+Mastodon gives BitlBee a permanent authentication token, which is saved in your configuration.
 
 You should probably save this configuration.
 
@@ -160,7 +161,7 @@ You should probably save this configuration.
 > **&lt;root&gt;** Configuration saved  
 
 ## read
-The default **mode** setting is **chat**. This means that each Mastodon account you add will result in a new channel in your IRC client.
+The default **mode** setting is **chat**. This means that each Mastodon account you add results in a new channel in your IRC client.
 
 Use **help set mode** in your Bitlbee control channel (**&bitlbee**) to read up on different modes.
 
@@ -183,7 +184,7 @@ Use **cw &lt;content warning&gt;** to set a content warning for your next reply 
 > **&lt;kensanata&gt;** No! Just no!  
 > **&lt;root&gt;** You: [09] [CW: capitalism] \*NSFW\* No! Just no!  
 
-When mentioning people in your toots, make sure to qualify them appropriately. Example:
+When mentioning people in your toots, make sure to qualify them appropriately.
 
 > **&lt;somebody&gt;** I'm using @kensanata@octodon.social's Mastodon plugin for Bitlbee.  
 
@@ -270,12 +271,35 @@ Use **info relation &lt;nick|account&gt;** to get debug information about the re
 
 Use **info &lt;id|nick&gt;** to get debug information about a status or the last status by a nick.
 
+Use **api &lt;get|put|post|delete&gt; &lt;endpoint&gt; &lt;optional args&gt;** to call the API directly.
+
+> **&lt;kensanata&gt;** api get /lists  
+> **&lt;root&gt;** {  
+> **&lt;root&gt;**  id: 5  
+> **&lt;root&gt;**  title: Bots  
+> **&lt;root&gt;** }  
+> **&lt;root&gt;** {  
+> **&lt;root&gt;**  id: 9  
+> **&lt;root&gt;**  title: OSR  
+> **&lt;root&gt;** }  
+> **&lt;kensanata&gt;** api delete /lists/5  
+> **&lt;kensanata&gt;** api get /lists  
+> **&lt;root&gt;** {  
+> **&lt;root&gt;**  id: 9  
+> **&lt;root&gt;**  title: OSR  
+> **&lt;root&gt;** }  
+> **&lt;kensanata&gt;** api post /lists/9/accounts account_ids[] 13250  
+
 ## search
 Mastodon allows you to search for accounts, hashtags, and statuses you've written, boosted, favourited or were mentioned in, if your instance has this feature enabled.
 
 Use **search &lt;what&gt;** to search for all these things.
 
 You can also search for a specific status by searching the URL of said status. This sounds strange but it will allow you to boost it, for example.
+
+If you want to show the statuses for a specific account or a hashtag, use **timeline &lt;nick|#hashtag&gt;**.
+
+If you want to subscribe to a particular hashtag, see *[hashtag](#hashtag)* for more.
 
 ## spam
 Use **report &lt;id|nick&gt; &lt;comment&gt;** to report a status or the last status by a nick. Synonyms:**spam**.
@@ -305,7 +329,7 @@ Note that where as you can still issue commands in these hashtag channels, the o
 ## public
 Use **timeline local** to show the most recent messages for the local timeline (these are statuses from accounts on your instance). Use **timeline federated** to show the most recent messages for the federated timeline (these are statuses from the local accounts and anybody they are following). Use **more** to show more statuses from the same command.
 
-If you want to follow a hashtag or the local of feredated timeline, you need to use the control channel, **&bitlbee**. The following assumes that your account is called **mastodon**. The **chat add** command takes the parameters **account**, **timeline**, and **channel name**. In the example we're giving the channel a similar name. You can name the channel whatever you want. The important part is that the channel **topic** must be the name of the timeline it is subscribing to.
+If you want to follow a hashtag, or the local, or the feredated timeline, you need to use the control channel, **&bitlbee**. The following assumes that your account is called **mastodon**. The **chat add** command takes the parameters **account**, **timeline**, and **channel name**. In the example we're giving the channel a similar name. You can name the channel whatever you want. The important part is that the channel **topic** must be the name of the timeline it is subscribing to.
 
 > **&lt;kensanata&gt;** chat add mastodon local #local  
 > **&lt;kensanata&gt;** channel #local set auto_join true  
@@ -320,6 +344,34 @@ Or:
 Don't forget to **save** your config.
 
 Note that where as you can still issue commands in these channels, the output is going to appear in the original **account channel**.
+
+## lists
+You can make lists of the people you follow. To read the latest messages of people in a list, use **timeline &lt;title&gt;**. If you then create a separate channel for a list, you'll see only statuses of people in that list.
+
+These are the commands available:
+> **list** (to see your lists)  
+> **list create &lt;title&gt;**  
+> **list delete &lt;title&gt;**  
+> **list &lt;title&gt;** (to see the accounts in a list)  
+> **list add &lt;nick&gt; to &lt;title&gt;**  
+> **list remove &lt;nick&gt; from &lt;title&gt;**  
+> **timeline &lt;title&gt;** (to read statuses from these accounts)  
+
+Example:
+
+> **&lt;somebody&gt;** follow kensanata@octodon.social  
+\*\*\* kensanata JOIN
+> **&lt;root&gt;** You are now following kensanata.  
+> **&lt;somebody&gt;** list create Important people  
+> **&lt;root&gt;** Command processed successfully  
+> **&lt;somebody&gt;** list add kensanata to Important people  
+> **&lt;root&gt;** Command processed successfully  
+
+If you want to follow a list, you need to use the control channel, **&bitlbee**. The following assumes that your account is called **mastodon**. The **chat add** command takes the parameters **account**, **title**, and **channel name**. As list titles may contain spaces, you need to use quotes. You can name the channel whatever you want. The important part is that the channel **topic** must be the title of a list.
+
+> **&lt;kensanata&gt;** chat add mastodon "Important people" #important  
+> **&lt;kensanata&gt;** channel #important set auto_join true  
+> **&lt;kensanata&gt;** /join #important  
 
 ## notifications
 Use **notifications** to show the most recent notifications again. Use **more** to show more notifications.
