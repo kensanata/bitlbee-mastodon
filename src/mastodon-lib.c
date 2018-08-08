@@ -2329,7 +2329,7 @@ void mastodon_status(struct im_connection *ic, guint64 id)
 /**
  * Allow the user to make a raw request.
  */
-void mastodon_raw(struct im_connection *ic, char *method, char *url) {
+void mastodon_raw(struct im_connection *ic, char *method, char *url, char **arguments, int arguments_len) {
 	http_method_t m;
 	if (g_ascii_strcasecmp(method, "get") == 0) {
 		m = HTTP_GET;
@@ -2340,7 +2340,7 @@ void mastodon_raw(struct im_connection *ic, char *method, char *url) {
 	} else if (g_ascii_strcasecmp(method, "delete") == 0) {
 		m = HTTP_DELETE;
 	}
-	mastodon_http(ic, url, mastodon_http_log_all, ic, m, NULL, 0);
+	mastodon_http(ic, url, mastodon_http_log_all, ic, m, arguments, arguments_len);
 }
 
 /**

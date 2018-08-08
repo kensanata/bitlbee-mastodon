@@ -1280,11 +1280,29 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			mastodon_user(ic, cmd[2]);
 		} else if (g_ascii_strcasecmp(cmd[1], "relation") == 0 && cmd[2]) {
 			mastodon_relation_to_user(ic, cmd[2]);
+		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
+			mastodon_status(ic, id);
+		}
+	} else if (g_ascii_strcasecmp(cmd[0], "api") == 0) {
+		if (!cmd[1] || !cmd[2]) {
+			mastodon_log(ic, "Usage: api [get|put|post|delete] endpoint params...\n"
+						 "Example: api post /lists/12/accounts account_ids[] 321");
 		} else if ((g_ascii_strcasecmp(cmd[1], "get") == 0 ||
 					g_ascii_strcasecmp(cmd[1], "put") == 0 ||
 					g_ascii_strcasecmp(cmd[1], "post") == 0 ||
 					g_ascii_strcasecmp(cmd[1], "delete") == 0) && cmd[2]) {
-			mastodon_raw(ic, cmd[1], cmd[2]);
+			char *s = strstr(cmd[2], " ");
+			if (s) {
+				*s = '\0';
+				char **args = g_strsplit(s+1, " ", 0);
+				/* find length of null-terminated vector */
+				int i = 0;
+				for (; args[i]; i++);
+				mastodon_raw(ic, cmd[1], cmd[2], args, i);
+				g_strfreev(args);
+			} else {
+				mastodon_raw(ic, cmd[1], cmd[2], NULL, 0);
+			}
 		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_status(ic, id);
 		}
