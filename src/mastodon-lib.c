@@ -3606,11 +3606,12 @@ static void mastodon_http_list_reload2(struct http_request *req) {
 	int i;
 	for (i = 0; i < parsed->u.array.length; i++) {
 
-		struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[i]);
-
-		if (ma) {
-			bee_user_t *bu = bee_user_by_handle(ic->bee, ic, ma->acct);
-			struct mastodon_user_data *mud = (struct mastodon_user_data*) bu->data;
+		struct mastodon_account *ma;
+		bee_user_t *bu;
+		struct mastodon_user_data *mud;
+		if ((ma = mastodon_xt_get_user(parsed->u.array.values[i])) &&
+			(bu = bee_user_by_handle(ic->bee, ic, ma->acct)) &&
+			(mud = (struct mastodon_user_data*) bu->data)) {
 			mud->lists = g_slist_prepend(mud->lists, g_strdup(mc->str));
 			ma_free(ma);
 		}
