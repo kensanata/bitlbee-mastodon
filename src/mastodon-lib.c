@@ -910,7 +910,6 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 	}
 
 	char *msg = mastodon_msg_add_id(ic, status, "");
-	gboolean seen = FALSE;
 
 	struct mastodon_user_data *mud;
 	struct groupchat *c;
@@ -928,7 +927,6 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 			struct groupchat *c = bee_chat_by_title(ic->bee, ic, title);
 			if (c) {
 				mastodon_status_show_chat1(ic, me, c, msg, status);
-				seen = TRUE;
 			}
 		}
 		break;
@@ -940,7 +938,6 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 			struct groupchat *c = bee_chat_by_title(ic->bee, ic, tag);
 			if (c) {
 				mastodon_status_show_chat1(ic, me, c, msg, status);
-				seen = TRUE;
 			}
 		}
 		break;
@@ -949,7 +946,6 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 		c = bee_chat_by_title(ic->bee, ic, "local");
 		if (c) {
 			mastodon_status_show_chat1(ic, me, c, msg, status);
-			seen = TRUE;
 		}
 		break;
 
@@ -957,21 +953,13 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 		c = bee_chat_by_title(ic->bee, ic, "federated");
 		if (c) {
 			mastodon_status_show_chat1(ic, me, c, msg, status);
-			seen = TRUE;
 		}
 		break;
 
 	case MT_HOME:
-		// this is the default, see below
-		break;
-	}
-
-	// The default is the home timeline. If you use the timeline command, this is what happens: no separate
-	// groupchat exists.
-	if (!seen) {
 		c = mastodon_groupchat_init(ic);
 		mastodon_status_show_chat1(ic, me, c, msg, status);
-		seen = TRUE;
+		break;
 	}
 
 	g_free(msg);
