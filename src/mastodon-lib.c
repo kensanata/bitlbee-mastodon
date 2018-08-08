@@ -911,14 +911,26 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 
 	char *msg = mastodon_msg_add_id(ic, status, "");
 	gboolean seen = FALSE;
+
+	struct mastodon_user_data *mud;
 	struct groupchat *c;
+	bee_user_t *bu;
 	GSList *l;
 
 	switch (status->subscription) {
 
 	case MT_LIST:
 		// Add the status to existing group chats with a topic matching any the lists this user is part of
-		// FIXME
+		bu = bee_user_by_handle(ic->bee, ic, status->account->acct);
+		mud = (struct mastodon_user_data*) bu->data;
+		for (l = mud->lists; l; l = l->next) {
+			char *title = l->data;
+			struct groupchat *c = bee_chat_by_title(ic->bee, ic, title);
+			if (c) {
+				mastodon_status_show_chat1(ic, me, c, msg, status);
+				seen = TRUE;
+			}
+		}
 		break;
 
 	case MT_HASHTAG:
@@ -1324,7 +1336,9 @@ void mastodon_list_stream(struct im_connection *ic, struct mastodon_command *mc)
 	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_LIST_URL,
 						 mastodon_http_stream_list, ic, HTTP_GET, args, 2);
 	mastodon_stream(ic, req);
-	// FIXME: assign this to c->req = req!
+	/* We cannot return req here because this is a callback (as we had to figure out the list id before getting here).
+	 * This is why we must rely on the groupchat being part of mastodon_command (mc). */
+	mc->c->data = req;
 }
 
 /**
@@ -1499,7 +1513,6 @@ static void mastodon_http_list_timeline2(struct http_request *req)
  */
 void mastodon_list_timeline(struct im_connection *ic, struct mastodon_command *mc) {
 	char *url = g_strdup_printf(MASTODON_LIST_TIMELINE_URL, mc->id);
-	mastodon_log(ic, "debug: mastodon_list_timeline %s", url);
 	mastodon_http(ic, url, mastodon_http_list_timeline2, mc, HTTP_GET, NULL, 0);
 	g_free(url);
 }
@@ -1510,9 +1523,6 @@ void mastodon_list_timeline(struct im_connection *ic, struct mastodon_command *m
  */
 static void mastodon_http_list_timeline(struct http_request *req)
 {
-	struct mastodon_command *mc = req->data;
-	struct im_connection *ic = mc->ic;
-	mastodon_log(ic, "debug: mastodon_http_list_timeline");
 	mastodon_chained_list(req, mastodon_list_timeline);
 }
 
@@ -1522,7 +1532,6 @@ static void mastodon_http_list_timeline(struct http_request *req)
  */
 void mastodon_unknown_list_timeline(struct im_connection *ic, char *title)
 {
-	mastodon_log(ic, "debug: mastodon_unknown_list_timeline");
 	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
 	mc->ic = ic;
 	mc->str = g_strdup(title);
@@ -3571,7 +3580,7 @@ void mastodon_http_list_remove_account(struct http_request *req) {
  * Remove one or more accounts from a list.
  */
 void mastodon_unknown_list_remove_account(struct im_connection *ic, guint64 id, char *title) {
-		struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
 	mc->ic = ic;
 	mc->id2 = id;
 	mc->str = g_strdup(title);
@@ -3582,6 +3591,116 @@ void mastodon_unknown_list_remove_account(struct im_connection *ic, guint64 id, 
 		mc->undo = g_strdup_printf("list add %" G_GINT64_FORMAT " to %s", id, title);
 	}
 	mastodon_with_named_list(ic, mc, mastodon_http_list_remove_account);
+}
+
+/**
+ * Second callback to reload all the lists. We are getting all the accounts for one of the lists, here.
+ */
+static void mastodon_http_list_reload2(struct http_request *req) {
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+
+	if (!g_slist_find(mastodon_connections, ic)) {
+		goto finish;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		goto finish;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		goto finish;
+	}
+
+	int i;
+	for (i = 0; i < parsed->u.array.length; i++) {
+
+		struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[i]);
+
+		if (ma) {
+			bee_user_t *bu = bee_user_by_handle(ic->bee, ic, ma->acct);
+			struct mastodon_user_data *mud = (struct mastodon_user_data*) bu->data;
+			mud->lists = g_slist_prepend(mud->lists, g_strdup(mc->str));
+			ma_free(ma);
+		}
+	}
+
+	mastodon_log(ic, "Membership of %s reloaded", mc->str);
+
+finish:
+	mc_free(mc);
+	json_value_free(parsed);
+}
+
+/**
+ * First callback to reload all the lists. We are getting all the lists, here. For each one, get the members in the
+ * list. Note that we didn't have any data to store so req->data is simply the im_connection (ic), not a
+ * mastodon_command (mc).
+ */
+static void mastodon_http_list_reload(struct http_request *req) {
+	struct im_connection *ic = req->data;
+
+	if (!g_slist_find(mastodon_connections, ic)) {
+		goto finish;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		goto finish;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		goto finish;
+	}
+
+	/* Clear existing list membership. */
+	GSList *l;
+	for (l = ic->bee->users; l; l = l->next) {
+		bee_user_t *bu = l->data;
+		struct mastodon_user_data *mud = (struct mastodon_user_data*) bu->data;
+		if (mud) {
+			g_slist_free_full(mud->lists, g_free); mud->lists = NULL;
+		}
+	}
+
+	int i;
+	guint64 id = 0;
+
+	/* Get members for every list defined. */
+	for (i = 0; i < parsed->u.array.length; i++) {
+			json_value *a = parsed->u.array.values[i];
+			json_value *it;
+			const char *title;
+			if (a->type == json_object &&
+				(it = json_o_get(a, "id")) &&
+				(id = mastodon_json_int64(it)) &&
+				(title = json_o_str(a, "title"))) {
+
+				struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+				mc->ic = ic;
+				mc->id2 = id;
+				mc->str = g_strdup(title);
+
+				char *url = g_strdup_printf(MASTODON_LIST_ACCOUNTS_URL, id);
+				mastodon_http(ic, url, mastodon_http_list_reload2, mc, HTTP_GET, NULL, 0);
+				g_free(url);
+			}
+	}
+
+finish:
+	json_value_free(parsed);
+}
+
+/**
+ * Reload the memberships of all the lists. We need this for mastodon_status_show_chat().
+ */
+void mastodon_list_reload(struct im_connection *ic) {
+	mastodon_http(ic, MASTODON_LIST_URL, mastodon_http_list_reload, ic, HTTP_GET, NULL, 0);
 }
 
 /**

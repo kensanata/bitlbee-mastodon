@@ -363,6 +363,7 @@ static void mastodon_connect(struct im_connection *ic)
 
 	mastodon_initial_timeline(ic);
 	mastodon_open_user_stream(ic);
+	mastodon_list_reload(ic);
 	ic->flags |= OPT_PONGS;
 }
 
@@ -845,6 +846,7 @@ static void mastodon_buddy_data_add(bee_user_t *bu)
 static void mastodon_buddy_data_free(bee_user_t *bu)
 {
 	struct mastodon_user_data *mud = (struct mastodon_user_data*) bu->data;
+	g_slist_free_full(mud->lists, g_free); mud->lists = NULL;
 	g_slist_free_full(mud->mentions, g_free); mud->mentions = NULL;
 	g_free(mud->spoiler_text); mud->spoiler_text = NULL;
 	g_free(bu->data);
@@ -1535,6 +1537,12 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 				mastodon_log(ic, "You forgot the title of the new list!");
 			} else {
 				mastodon_list_create(ic, message + 12); // "list create %s"
+			}
+		} else if (g_ascii_strcasecmp(cmd[1], "reload") == 0) {
+			if (cmd[2]) {
+				mastodon_log(ic, "List reloading takes no argument");
+			} else {
+				mastodon_list_reload(ic);
 			}
 		} else if (g_ascii_strcasecmp(cmd[1], "delete") == 0) {
 			if (!cmd[2]) {

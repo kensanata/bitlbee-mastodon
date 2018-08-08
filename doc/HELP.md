@@ -261,7 +261,7 @@ Use **whois &lt;id|nick&gt;** to show handle and full name by a nick, or of all 
 
 Use **bio &lt;nick&gt;** to show the bio of a nick.
 
-Use **pinned &lt;nick&gt;** to show the pinned statuses of a nick. Use **pin &lt;id&gt;** to pin a status to your profile and use use **unpin &lt;id&gt;** to unpin a status from your profile.
+Use **pinned &lt;nick&gt;** to show the pinned statuses of a nick. Use **pin &lt;id&gt;** to pin a status to your profile and use **unpin &lt;id&gt;** to unpin a status from your profile.
 
 Use **info instance** to get debug information about your instance.
 
@@ -355,6 +355,7 @@ These are the commands available:
 > **list &lt;title&gt;** (to see the accounts in a list)  
 > **list add &lt;nick&gt; to &lt;title&gt;**  
 > **list remove &lt;nick&gt; from &lt;title&gt;**  
+> **list reload** (when you are done changing list memberships)  
 > **timeline &lt;title&gt;** (to read statuses from these accounts)  
 
 Example:
@@ -372,6 +373,8 @@ If you want to follow a list, you need to use the control channel, **&bitlbee**.
 > **&lt;kensanata&gt;** chat add mastodon "Important people" #important  
 > **&lt;kensanata&gt;** channel #important set auto_join true  
 > **&lt;kensanata&gt;** /join #important  
+
+Don't forget to **save** your config.
 
 ## notifications
 Use **notifications** to show the most recent notifications again. Use **more** to show more notifications.

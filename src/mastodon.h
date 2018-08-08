@@ -135,6 +135,8 @@ struct mastodon_data {
 	guint64 seen_id; /* For deduplication */
 	mastodon_flags_t flags;
 
+	GHashTable *member; /* of ma->acct and GSList of char *title point to md->lists */
+
 	guint64 last_id; /* Information about our last status posted */
 	mastodon_visibility_t last_visibility;
 	char *last_spoiler_text;
@@ -168,11 +170,12 @@ struct mastodon_data {
 
 struct mastodon_user_data {
 	guint64 account_id;
-	guint64 last_id;
-	time_t last_time;
-	mastodon_visibility_t visibility;
-	GSList *mentions;
-	char *spoiler_text;
+	guint64 last_id; /* last status id (in case we reply to it) */
+	time_t last_time; /* when was this last status sent (if we maybe reply) */
+	mastodon_visibility_t visibility; /* what visibility did it have so can use it in our reply */
+	GSList *mentions; /* what accounts did it mention so we can mention them in our reply, too */
+	char *spoiler_text; /* what CW did it use so we can keep it in our reply */
+	GSList *lists; /* list membership of this account */
 };
 
 #define MASTODON_LOG_LENGTH 256
