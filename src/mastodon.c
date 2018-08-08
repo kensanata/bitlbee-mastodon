@@ -1537,8 +1537,24 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			} else {
 				mastodon_unknown_list_delete(ic, message + 12); // "list delete %s"
 			}
+		} else if (g_ascii_strcasecmp(cmd[1], "add") == 0) {
+			char **args = g_strsplit(cmd[2], " to ", 2);
+			if (args[0] && args[1] && (id = mastodon_user_id_or_warn(ic, args[0]))) {
+				mastodon_unknown_list_add_account(ic, id, args[1]);
+			} else {
+				mastodon_log(ic, "I am confused. Please use 'list add <nick> to <list>'.");
+			}
+			g_strfreev(args);
+		} else if (g_ascii_strcasecmp(cmd[1], "remove") == 0) {
+			char **args = g_strsplit(cmd[2], " from ", 2);
+			if (args[0] && args[1] && (id = mastodon_user_id_or_warn(ic, args[0]))) {
+				mastodon_unknown_list_remove_account(ic, id, args[1]);
+			} else {
+				mastodon_log(ic, "I need to what to do! Use 'list remove <nick> from <list>'.");
+			}
+			g_strfreev(args);
 		} else {
-			mastodon_unknown_list_accounts(ic, cmd[1]);
+			mastodon_unknown_list_accounts(ic, message + 5); // "list %s"
 		}
 	} else if (g_ascii_strcasecmp(cmd[0], "reply") == 0) {
 		if (!cmd[1] || !cmd[2]) {

@@ -125,10 +125,8 @@ void mastodon_unknown_account_pinned_statuses(struct im_connection *ic, char *wh
 void mastodon_account_bio(struct im_connection *ic, guint64 id);
 void mastodon_unknown_account_bio(struct im_connection *ic, char *who);
 void mastodon_lists(struct im_connection *ic);
-void mastodon_account_lists(struct im_connection *ic, guint64 id);
-void mastodon_unknown_list_accounts(struct im_connection *ic, char *title);
 void mastodon_list_create(struct im_connection *ic, char *title);
-void mastodon_list_update(struct im_connection *ic, guint64 id, char *title);
+void mastodon_unknown_list_accounts(struct im_connection *ic, char *title);
 void mastodon_unknown_list_delete(struct im_connection *ic, char *title);
-void mastodon_list_add_accounts(struct im_connection *ic, guint64 id, ...);
-void mastodon_list_remove_accounts(struct im_connection *ic, guint64 id, ...);
+void mastodon_unknown_list_add_account(struct im_connection *ic, guint64 id, char *title);
+void mastodon_unknown_list_remove_account(struct im_connection *ic, guint64 id, char *title);

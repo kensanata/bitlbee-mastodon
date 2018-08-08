@@ -111,6 +111,8 @@ typedef enum {
 	MC_UNBOOST,
 	MC_LIST_CREATE,
 	MC_LIST_DELETE,
+	MC_LIST_ADD_ACCOUNT,
+	MC_LIST_REMOVE_ACCOUNT,
 } mastodon_command_type_t;
 
 struct mastodon_log_data;

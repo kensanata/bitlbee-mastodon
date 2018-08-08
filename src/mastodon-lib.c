@@ -108,6 +108,7 @@ struct mastodon_report {
 struct mastodon_command {
 	struct im_connection *ic;
 	guint64 id;
+	guint64 id2;
 	char *str;
 	char *undo;
 	char *redo;
@@ -1674,6 +1675,8 @@ static void mastodon_http_callback(struct http_request *req)
 	case MC_UNBOOST:
 	case MC_LIST_CREATE:
 	case MC_LIST_DELETE:
+	case MC_LIST_ADD_ACCOUNT:
+	case MC_LIST_REMOVE_ACCOUNT:
 	case MC_DELETE:
 		md->last_id = 0;
 		mastodon_do(ic, mc->redo, mc->undo);
@@ -1910,6 +1913,8 @@ void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type
 		case MC_DELETE:
 		case MC_LIST_CREATE:
 		case MC_LIST_DELETE:
+		case MC_LIST_ADD_ACCOUNT:
+		case MC_LIST_REMOVE_ACCOUNT:
 			/* These commands should not be calling mastodon_post. Instead, call mastodon_post_status or whatever else
 			 * is required. */
 			break;
@@ -3144,7 +3149,8 @@ void mastodon_list_update(struct im_connection *ic, guint64 id, char *title);
 typedef void (*mastodon_chained_command_function)(struct im_connection *ic, struct mastodon_command *mc);
 
 /**
- * This is the wrapper around callbacks that need to search for the list id in a list result.
+ * This is the wrapper around callbacks that need to search for the list id in a list result. Note that list titles are
+ * case-sensitive.
  */
 void mastodon_chained_list(struct http_request *req, mastodon_chained_command_function func) {
 	struct mastodon_command *mc = req->data;
@@ -3241,7 +3247,14 @@ void mastodon_http_list_accounts2(struct http_request *req) {
 
 			if (ma) {
 				g_string_append(m, " ");
-				g_string_append(m, ma->acct);
+				bee_user_t *bu = bee_user_by_handle(ic->bee, ic, ma->acct);
+				if (bu) {
+					irc_user_t *iu = bu->ui_data;
+					g_string_append(m, iu->nick);
+				} else {
+					g_string_append(m, "@");
+					g_string_append(m, ma->acct);
+				}
 				ma_free(ma);
 			}
 		}
@@ -3316,7 +3329,7 @@ void mastodon_http_list_delete2(struct http_request *req) {
 
 			if (ma) {
 				g_string_append(undo, FS);
-				g_string_append_printf(undo, "list add %s to %s", ma->acct, title);
+				g_string_append_printf(undo, "list add %" G_GINT64_FORMAT " to %s", ma->id, title);
 			}
 			ma_free(ma);
 		}
@@ -3368,7 +3381,7 @@ void mastodon_http_list_delete(struct http_request *req) {
 }
 
 /**
- * Delete a list by title. Note that list titles are case-sensitive.
+ * Delete a list by title.
  */
 void mastodon_unknown_list_delete(struct im_connection *ic, char *title) {
 	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
@@ -3384,14 +3397,82 @@ void mastodon_unknown_list_delete(struct im_connection *ic, char *title) {
 };
 
 /**
+ * Part two of the first callback: now we have mc->id. Call the URL which will give us the accounts themselves. The API
+ * documentation says: If you specify limit=0 in the query, all accounts will be returned without pagination.
+ */
+void mastodon_list_add_account(struct im_connection *ic, struct mastodon_command *mc) {
+	char *args[2] = {
+		"account_ids[]", g_strdup_printf("%" G_GUINT64_FORMAT, mc->id2),
+	};
+	char *url = g_strdup_printf(MASTODON_LIST_ACCOUNTS_URL, mc->id);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, mc, HTTP_POST, args, 2);
+	g_free(args[1]);
+	g_free(url);
+}
+
+/**
+ * First callback for adding an account to a list. First, get the list id from the data we received, then call the next
+ * function.
+ */
+void mastodon_http_list_add_account(struct http_request *req) {
+	mastodon_chained_list(req, mastodon_list_add_account);
+}
+
+/**
  * Add one or more accounts to a list.
  */
-void mastodon_list_add_accounts(struct im_connection *ic, guint64 id, ...);
+void mastodon_unknown_list_add_account(struct im_connection *ic, guint64 id, char *title) {
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+	mc->id2 = id;
+	mc->str = g_strdup(title);
+	struct mastodon_data *md = ic->proto_data;
+	if (md->undo_type == MASTODON_NEW) {
+		mc->command = MC_LIST_ADD_ACCOUNT;
+		mc->redo = g_strdup_printf("list add %" G_GINT64_FORMAT " to %s", id, title);
+		mc->undo = g_strdup_printf("list remove %" G_GINT64_FORMAT " from %s", id, title);
+	}
+	mastodon_with_named_list(ic, mc, mastodon_http_list_add_account);
+};
+
+/**
+ * Part two of the first callback: now we have mc->id. Call the URL which will give us the accounts themselves. The API
+ * documentation says: If you specify limit=0 in the query, all accounts will be returned without pagination.
+ */
+void mastodon_list_remove_account(struct im_connection *ic, struct mastodon_command *mc) {
+	char *args[2] = {
+		"account_ids[]", g_strdup_printf("%" G_GUINT64_FORMAT, mc->id2),
+	};
+	char *url = g_strdup_printf(MASTODON_LIST_ACCOUNTS_URL, mc->id);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, mc, HTTP_DELETE, args, 2);
+	g_free(args[1]);
+	g_free(url);
+}
+
+/**
+ * First callback for removing an accounts from a list. First, get the list id from the data we received, then call the
+ * next function.
+ */
+void mastodon_http_list_remove_account(struct http_request *req) {
+	mastodon_chained_list(req, mastodon_list_remove_account);
+}
 
 /**
  * Remove one or more accounts from a list.
  */
-void mastodon_list_remove_accounts(struct im_connection *ic, guint64 id, ...);
+void mastodon_unknown_list_remove_account(struct im_connection *ic, guint64 id, char *title) {
+		struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+	mc->id2 = id;
+	mc->str = g_strdup(title);
+	struct mastodon_data *md = ic->proto_data;
+	if (md->undo_type == MASTODON_NEW) {
+		mc->command = MC_LIST_REMOVE_ACCOUNT;
+		mc->redo = g_strdup_printf("list remove %" G_GINT64_FORMAT " from %s", id, title);
+		mc->undo = g_strdup_printf("list add %" G_GINT64_FORMAT " to %s", id, title);
+	}
+	mastodon_with_named_list(ic, mc, mastodon_http_list_remove_account);
+}
 
 /**
  * Callback for getting your own account. This saves the account_id.
