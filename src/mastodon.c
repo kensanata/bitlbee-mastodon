@@ -1493,12 +1493,14 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		}
 	} else if (g_ascii_strcasecmp(cmd[0], "timeline") == 0) {
 		if (!cmd[1] || strcmp(cmd[1], "home") == 0) {
-			mastodon_unknown_account_statuses(ic, md->user);
+			mastodon_home_timeline(ic);
 		} else if ((bu = mastodon_user_by_nick(ic, cmd[1])) &&
 				   (id = mastodon_account_id(bu))) {
 			mastodon_account_statuses(ic, id);
 		} else if (*cmd[1] == '#') {
 			mastodon_hashtag_timeline(ic, cmd[1] + 1);
+		} else if (*cmd[1] == '@') {
+			mastodon_unknown_account_statuses(ic, cmd[1] + 1);
 		} else if (strcmp(cmd[1], "local") == 0) {
 			mastodon_local_timeline(ic);
 		} else if (strcmp(cmd[1], "federated") == 0) {

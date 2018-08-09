@@ -1477,6 +1477,16 @@ void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag)
 	g_free(url);
 }
 
+static void mastodon_http_home_timeline(struct http_request *req)
+{
+	mastodon_http_timeline(req, MT_HOME);
+}
+
+void mastodon_home_timeline(struct im_connection *ic)
+{
+	mastodon_http(ic, MASTODON_HOME_TIMELINE_URL, mastodon_http_home_timeline, ic, HTTP_GET, NULL, 0);
+}
+
 static void mastodon_http_local_timeline(struct http_request *req)
 {
 	mastodon_http_timeline(req, MT_LOCAL);

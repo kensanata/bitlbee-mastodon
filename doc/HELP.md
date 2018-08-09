@@ -222,6 +222,8 @@ Use **context &lt;id|nick&gt;** to show some context for a status or the last st
 
 Use **timeline &lt;nick&gt;** to show the most recent messages by a nick. Use **more** to show more statuses from the same command.
 
+Use **timeline @&lt;account&gt;** to show the most recent messages by an account that isn't a nick in your channel. Use **more** to show more statuses from the same command.
+
 ## reply
 If you use the default IRC conventions of starting a message with a nickname and a colon (**:**) or a comma (**,**), then your message will be treated as a reply to that nick's last message. As is custom, the recipient and all the people they mentioned in their toot get mentioned in your reply. This only works if that nick's last message was sent within the last 3h. For more information about this time window use **help set auto_reply_timeout** in your Bitlbee control channel (**&bitlbee**).
 
