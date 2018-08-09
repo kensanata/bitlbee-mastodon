@@ -3250,10 +3250,10 @@ finish:
 		/* Now that we have reached the end of the list, everybody has mastodon_user_data set, at last: imcb_add_buddy →
 		   bee_user_new → ic->acc->prpl->buddy_data_add → mastodon_buddy_data_add. Now we're ready to (re)load lists. */
 		mastodon_list_reload(ic, TRUE);
-	}
 
-	struct mastodon_data *md = ic->proto_data;
-	md->flags |= MASTODON_HAVE_FRIENDS;
+		struct mastodon_data *md = ic->proto_data;
+		md->flags |= MASTODON_HAVE_FRIENDS;
+	}
 }
 
 /**

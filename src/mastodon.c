@@ -793,10 +793,19 @@ static struct groupchat *mastodon_chat_join(struct im_connection *ic,
 		mastodon_hashtag_timeline(ic, topic + 1);
 		req = mastodon_open_hashtag_stream(ic, topic + 1);
 	} else {
-		/* At this point we cannot be sure that an initial timeline will work because at login time the lists are not
+		/* After the initial login we cannot be sure that an initial list timeline will work because the lists are not
 		   loaded, yet. That's why mastodon_following() will end up reloading the lists with the extra parameter which
-		   will load these timelines. In addition to that, as we need to identify the list we're going to stream, we
-		   cannot return a request from here. Instead, pass the channel along. */
+		   will load these timelines. If we're creating this channel at a later point, however, this should be possible.
+		   One way to determine if we're "at a later point" is by looking at MASTODON_HAVE_FRIENDS. It's actually not
+		   quite correct: at this point we have the lists but not the list members, but it should be good enough as
+		   we're only interested in later chat joining, not auto_join. */
+		struct mastodon_data *md = ic->proto_data;
+		if (md->flags & MASTODON_HAVE_FRIENDS) {
+			mastodon_unknown_list_timeline(ic, topic);
+		}
+		/* We need to identify the list we're going to stream but we don't get a request on the return from
+		   mastodon_open_unknown_list_stream(). Instead, we pass the channel along and when we have the list, the
+		   request will be set accordingly. */
 		mastodon_open_unknown_list_stream(ic, c, topic);
 	}
 	g_free(topic);
