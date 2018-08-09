@@ -3,6 +3,7 @@ This document was generated from the help text for the plugin.
 
 Mastodon is a free, open-source social network server. A decentralized solution to commercial platforms, it avoids the risks of a single company monopolizing your communication. Anyone can run Mastodon and participate in the social network seamlessly.
 
+* *[news](#news)* - Backwards incompatible changes
 * *[register](#register)* - Registering an account
 * *[connect](#connect)* - Connecting to an instance
 * *[read](#read)* - Reading your timeline
@@ -25,6 +26,17 @@ Mastodon is a free, open-source social network server. A decentralized solution 
 * *[lists](#lists)* - Managing lists
 * *[notifications](#notifications)* - Showing your notifications
 * *[set](#set)* - Settings affecting Mastodon accounts
+
+## news
+> **Release 1.4.0**  
+If you have subscribed to a hashtag, you need to change your channel settings and prepend the hash. Do this from the control channel (**&bitlbee**). Let's assume you have a channel called #hashtag. It's **room** setting should be **#hashtag**. If it's lacking the initial hash:
+
+> **&lt;kensanata&gt;** channel #hashtag set room  
+> **&lt;root&gt;** room = `hashtag'  
+> **&lt;kensanata&gt;** channel #hashtag set room #hashtag  
+> **&lt;root&gt;** room = `#hashtag'  
+
+Don't forget to save your settings.
 
 ## register
 You need to register your Mastodon account on an **instance**. See https://instances.social/ if you need help picking an instance. It's a bit like picking a mail server and signing up. Sadly, there is currently no way to do this from IRC. Your need to use a web browser to do it. Once you have the account, see **help account add mastodon** for setting up your account.
@@ -316,15 +328,26 @@ Use **timeline #&lt;hashtag&gt;** to show the most recent messages for a hashtag
 
 If you want to follow a hashtag, you need to use the control channel, **&bitlbee**.
 
-Here's how to subscribe to **#hashtag** for the account **mastodon**. The **chat add** command takes the parameters **account**, **hashtag**, and **channel name**. In the example we're simply giving the channel the same name. You can name the channel whatever you want. The important part is that the channel **topic** must be the hashtag it is subscribing to.
+Here's how to subscribe to **#hashtag** for the account **mastodon**:
 
-> **&lt;kensanata&gt;** chat add mastodon hashtag #hashtag  
+> **&lt;kensanata&gt;** chat add mastodon #hashtag  
 > **&lt;kensanata&gt;** channel #hashtag set auto_join true  
 > **&lt;kensanata&gt;** /join #hashtag  
 
 Don't forget to **save** your config.
 
+Use **channel list** to see all the channels you have available. See **help chat add** for more information.
+
 Note that where as you can still issue commands in these hashtag channels, the output is going to appear in the original **account channel**.
+
+If you try to subsribe to the same hashtag on a different instance, you'll run into a problem. The solution is to use a different name for the channel and then use **channel &lt;channel&gt; set room #hashtag**.
+
+> **&lt;kensanata&gt;** chat add mastodon2 #hashtag  
+> **&lt;root&gt;** A channel named `#hashtag already exists...  
+> **&lt;kensanata&gt;** chat add mastodon2 #hashtag2  
+> **&lt;kensanata&gt;** channel #hashtag2 set room #hashtag  
+> **&lt;kensanata&gt;** channel #hashtag2 set auto_join true  
+> **&lt;kensanata&gt;** /join #hashtag2  
 
 ## public
 Use **timeline local** to show the most recent messages for the local timeline (these are statuses from accounts on your instance). Use **timeline federated** to show the most recent messages for the federated timeline (these are statuses from the local accounts and anybody they are following). Use **more** to show more statuses from the same command.

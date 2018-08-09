@@ -1,5 +1,5 @@
 # Copyright 2017 Artem Savkov <artem.savkov@gmail.com>
-# Copyright 2017 Alex Schroeder <alex@gnu.org>
+# Copyright 2017-2018 Alex Schroeder <alex@gnu.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 EXTRA_DIST = mastodon-help.txt
+
+all-local: HELP.md
 
 install-data-local:
 	if [ -f $(datadir)/help.txt ]; then \
