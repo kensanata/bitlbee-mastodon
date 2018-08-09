@@ -1138,6 +1138,7 @@ static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *
 		for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
 			if (md->log[i].id == id) {
 				mastodon_log(ic, "Status %02x was deleted.", i);
+				md->log[i].id = 0; // prevent future references
 				return;
 			}
 		}
