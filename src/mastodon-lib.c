@@ -897,11 +897,11 @@ static void mastodon_status_show_chat1(struct im_connection *ic, gboolean me, st
 }
 
 /**
- * Function that is called to see the statuses in a group chat. Note
- * that the status might be tagged and that group chats dedicated to
- * particular hashtags might exist. In this case, put the status
- * there, too. Do this for each tag!
- */
+ * Function that is called to see the statuses in a group chat. If the user created appropriate group chats (see setup
+ * in mastodon_chat_join()), then we have extra streams providing the toots for these streams. The subscription
+ * attribute gives us a basic hint of how the status wants to be sorted. Now, we also have a TIMELINE command, which
+ * allows us to simulate the result. In this case, we can't be sure that appropriate group chats exist and thus we need
+ * to put those statuses into the user timeline if they do not. */
 static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_status *status)
 {
 	struct mastodon_data *md = ic->proto_data;
@@ -914,6 +914,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 
 	char *msg = mastodon_msg_add_id(ic, status, "");
 
+	gboolean seen = FALSE;
 	struct mastodon_user_data *mud;
 	struct groupchat *c;
 	bee_user_t *bu;
@@ -922,7 +923,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 	switch (status->subscription) {
 
 	case MT_LIST:
-		// Add the status to existing group chats with a topic matching any the lists this user is part of
+		/* Add the status to existing group chats with a topic matching any the lists this user is part of. */
 		bu = bee_user_by_handle(ic->bee, ic, status->account->acct);
 		mud = (struct mastodon_user_data*) bu->data;
 		for (l = mud->lists; l; l = l->next) {
@@ -930,41 +931,51 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 			struct groupchat *c = bee_chat_by_title(ic->bee, ic, title);
 			if (c) {
 				mastodon_status_show_chat1(ic, me, c, msg, status);
+				seen = TRUE;
 			}
 		}
 		break;
 
 	case MT_HASHTAG:
-		// Add the status to any other existing group chats whose title matches one of the tags.
+		/* Add the status to any other existing group chats whose title matches one of the tags, including the hash! */
 		for (l = status->tags; l; l = l->next) {
 			char *tag = l->data;
 			char *title = g_strdup_printf("#%s", tag);
 			struct groupchat *c = bee_chat_by_title(ic->bee, ic, title);
 			if (c) {
 				mastodon_status_show_chat1(ic, me, c, msg, status);
+				seen = TRUE;
 			}
 			g_free(title);
 		}
 		break;
 
 	case MT_LOCAL:
+		/* If there is an appropriate group chat, do not put it in the user timeline. */
 		c = bee_chat_by_title(ic->bee, ic, "local");
 		if (c) {
 			mastodon_status_show_chat1(ic, me, c, msg, status);
+			seen = TRUE;
 		}
 		break;
 
 	case MT_FEDERATED:
+		/* If there is an appropriate group chat, do not put it in the user timeline. */
 		c = bee_chat_by_title(ic->bee, ic, "federated");
 		if (c) {
 			mastodon_status_show_chat1(ic, me, c, msg, status);
+			seen = TRUE;
 		}
 		break;
 
 	case MT_HOME:
+		/* This is the default */
+		break;
+	}
+
+	if (!seen) {
 		c = mastodon_groupchat_init(ic);
 		mastodon_status_show_chat1(ic, me, c, msg, status);
-		break;
 	}
 
 	g_free(msg);
