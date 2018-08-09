@@ -28,8 +28,9 @@ Mastodon is a free, open-source social network server. A decentralized solution 
 * *[set](#set)* - Settings affecting Mastodon accounts
 
 ## news
-> **Release 1.4.0**  
-If you have subscribed to a hashtag, you need to change your channel settings and prepend the hash. Do this from the control channel (**&bitlbee**). Let's assume you have a channel called #hashtag. It's **room** setting should be **#hashtag**. If it's lacking the initial hash:
+Use **plugins** in the control channel (**&bitlbee**) to learn which version of the plugin you have.
+
+Incompatible change in **1.4.0**: If you have subscribed to a hashtag, you need to change your channel settings and prepend the hash. Do this from the control channel (**&bitlbee**). Let's assume you have a channel called #hashtag. It's **room** setting should be **#hashtag**. If it's lacking the initial hash:
 
 > **&lt;kensanata&gt;** channel #hashtag set room  
 > **&lt;root&gt;** room = `hashtag'  
