@@ -935,10 +935,12 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 		// Add the status to any other existing group chats whose title matches one of the tags.
 		for (l = status->tags; l; l = l->next) {
 			char *tag = l->data;
-			struct groupchat *c = bee_chat_by_title(ic->bee, ic, tag);
+			char *title = g_strdup_printf("#%s", tag);
+			struct groupchat *c = bee_chat_by_title(ic->bee, ic, title);
 			if (c) {
 				mastodon_status_show_chat1(ic, me, c, msg, status);
 			}
+			g_free(title);
 		}
 		break;
 

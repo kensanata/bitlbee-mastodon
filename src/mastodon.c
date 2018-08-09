@@ -790,9 +790,9 @@ static struct groupchat *mastodon_chat_join(struct im_connection *ic,
 	} else if (strcmp(topic, "federated") == 0) {
 		mastodon_federated_timeline(ic);
 		req = mastodon_open_federated_stream(ic);
-	} else if (*topic == '#') {
-		mastodon_hashtag_timeline(ic, topic);
-		req = mastodon_open_hashtag_stream(ic, topic);
+	} else if (topic[0] == '#') {
+		mastodon_hashtag_timeline(ic, topic + 1);
+		req = mastodon_open_hashtag_stream(ic, topic + 1);
 	} else {
 		/* Unfortunately, this will search twice for a list matchig topic. In addition to that, as we need to identify
 		 * the list we're going to stream, we cannot return a request from here. Instead, pass the channel along. */

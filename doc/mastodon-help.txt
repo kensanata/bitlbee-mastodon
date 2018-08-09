@@ -314,15 +314,26 @@ Use timeline #<hashtag> to show the most recent messages for a hashtag. Use m
 
 If you want to follow a hashtag, you need to use the control channel, &bitlbee.
 
-Here's how to subscribe to #hashtag for the account mastodon. The chat add command takes the parameters account, hashtag, and channel name. In the example we're simply giving the channel the same name. You can name the channel whatever you want. The important part is that the channel topic must be the hashtag it is subscribing to.
+Here's how to subscribe to #hashtag for the account mastodon:
 
-<kensanata> chat add mastodon hashtag #hashtag
+<kensanata> chat add mastodon #hashtag
 <kensanata> channel #hashtag set auto_join true
 <kensanata> /join #hashtag
 
 Don't forget to save your config.
 
+Use channel list to see all the channels you have available. See help chat add for more information.
+
 Note that where as you can still issue commands in these hashtag channels, the output is going to appear in the original account channel.
+
+If you try to subsribe to the same hashtag on a different instance, you'll run into a problem. The solution is to use a different name for the channel and then use channel <channel> set room #hashtag.
+
+<kensanata> chat add mastodon2 #hashtag
+<root> A channel named `#hashtag already exists...
+<kensanata> chat add mastodon2 #hashtag2
+<kensanata> channel #hashtag2 set room #hashtag
+<kensanata> channel #hashtag2 set auto_join true
+<kensanata> /join #hashtag2
 %
 ?mpublic
 Use timeline local to show the most recent messages for the local timeline (these are statuses from accounts on your instance). Use timeline federated to show the most recent messages for the federated timeline (these are statuses from the local accounts and anybody they are following). Use more to show more statuses from the same command.
