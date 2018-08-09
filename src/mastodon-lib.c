@@ -1108,10 +1108,12 @@ static void mastodon_notification_show(struct im_connection *ic, struct mastodon
 /**
  * Add exactly one notification to the timeline.
  */
-static void mastodon_stream_handle_notification(struct im_connection *ic, json_value *parsed)
+static void mastodon_stream_handle_notification(struct im_connection *ic, json_value *parsed, mastodon_timeline_type_t subscription)
 {
 	struct mastodon_notification *mn = mastodon_xt_get_notification(parsed, ic);
 	if (mn) {
+		if (mn->status)
+			mn->status->subscription = subscription;
 		mastodon_notification_show(ic, mn);
 		mn_free(mn);
 	}
@@ -1156,7 +1158,7 @@ static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_
 	if (evt_type == MASTODON_EVT_UPDATE) {
 		mastodon_stream_handle_update(ic, parsed, subscription);
 	} else if (evt_type == MASTODON_EVT_NOTIFICATION) {
-		mastodon_stream_handle_notification(ic, parsed);
+		mastodon_stream_handle_notification(ic, parsed, subscription);
 	} else if (evt_type == MASTODON_EVT_DELETE) {
 		mastodon_stream_handle_delete(ic, parsed);
 	} else {
