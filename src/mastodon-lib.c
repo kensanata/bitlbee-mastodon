@@ -436,14 +436,14 @@ static void mastodon_chained_list(struct http_request *req, mastodon_chained_com
 	struct im_connection *ic = mc->ic;
 
 	if (!g_slist_find(mastodon_connections, ic)) {
-		goto finish;
+		goto finally;
 	}
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		/* ic would have been freed in imc_logout in this situation */
 		ic = NULL;
-		goto finish;
+		goto finally;
 	}
 
 	if (parsed->type != json_array || parsed->u.array.length == 0) {
@@ -474,14 +474,17 @@ static void mastodon_chained_list(struct http_request *req, mastodon_chained_com
 	} else {
 		mc->id = id;
 		func(ic, mc);
-		goto success;
+		/* If successful, we need to keep mc for one more request. */
+		json_value_free(parsed);
+		return;
 	}
 
 finish:
-	/* If successful, we need to keep mc for one more request. */
-	mc_free(mc);
-success:
+	/* We didn't find what we were looking for and need to free the parsed data. */
 	json_value_free(parsed);
+finally:
+	/* We've encountered a problem and we need to free the mastodon_command. */
+	mc_free(mc);
 }
 
 /**
@@ -2520,7 +2523,7 @@ void mastodon_status(struct im_connection *ic, guint64 id)
  * Allow the user to make a raw request.
  */
 void mastodon_raw(struct im_connection *ic, char *method, char *url, char **arguments, int arguments_len) {
-	http_method_t m;
+	http_method_t m = HTTP_GET;
 	if (g_ascii_strcasecmp(method, "get") == 0) {
 		m = HTTP_GET;
 	} else if (g_ascii_strcasecmp(method, "put") == 0) {
@@ -3332,14 +3335,14 @@ void mastodon_http_list_accounts2(struct http_request *req) {
 	struct im_connection *ic = mc->ic;
 
 	if (!g_slist_find(mastodon_connections, ic)) {
-		goto finish;
+		goto finally;
 	}
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		/* ic would have been freed in imc_logout in this situation */
 		ic = NULL;
-		goto finish;
+		goto finally;
 	}
 
 	if (parsed->type != json_array || parsed->u.array.length == 0) {
@@ -3347,33 +3350,38 @@ void mastodon_http_list_accounts2(struct http_request *req) {
 					 "Delete it using 'list delete %s'\n"
 					 "Add members using 'list add <nick> to %s'",
 					 mc->str, mc->str);
-	} else {
-		int i;
-		GString *m = g_string_new("Members:");
-
-		for (i = 0; i < parsed->u.array.length; i++) {
-
-			struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[i]);
-
-			if (ma) {
-				g_string_append(m, " ");
-				bee_user_t *bu = bee_user_by_handle(ic->bee, ic, ma->acct);
-				if (bu) {
-					irc_user_t *iu = bu->ui_data;
-					g_string_append(m, iu->nick);
-				} else {
-					g_string_append(m, "@");
-					g_string_append(m, ma->acct);
-				}
-				ma_free(ma);
-			}
-		}
-		mastodon_log(ic, m->str);
-		g_string_free(m, TRUE);
+		goto finish;
 	}
+
+	int i;
+	GString *m = g_string_new("Members:");
+
+	for (i = 0; i < parsed->u.array.length; i++) {
+
+		struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[i]);
+
+		if (ma) {
+			g_string_append(m, " ");
+			bee_user_t *bu = bee_user_by_handle(ic->bee, ic, ma->acct);
+			if (bu) {
+				irc_user_t *iu = bu->ui_data;
+				g_string_append(m, iu->nick);
+			} else {
+				g_string_append(m, "@");
+				g_string_append(m, ma->acct);
+			}
+			ma_free(ma);
+		}
+	}
+	mastodon_log(ic, m->str);
+	g_string_free(m, TRUE);
+
 finish:
-	mc_free(mc);
+	/* We need to free the parsed data. */
 	json_value_free(parsed);
+finally:
+	/* We've encountered a problem and we need to free the mastodon_command. */
+	mc_free(mc);
 }
 
 
@@ -3592,14 +3600,14 @@ static void mastodon_http_list_reload2(struct http_request *req) {
 	struct im_connection *ic = mc->ic;
 
 	if (!g_slist_find(mastodon_connections, ic)) {
-		goto finish;
+		goto finally;
 	}
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		/* ic would have been freed in imc_logout in this situation */
 		ic = NULL;
-		goto finish;
+		goto finally;
 	}
 
 	if (parsed->type != json_array || parsed->u.array.length == 0) {
@@ -3623,8 +3631,11 @@ static void mastodon_http_list_reload2(struct http_request *req) {
 	mastodon_log(ic, "Membership of %s reloaded", mc->str);
 
 finish:
-	mc_free(mc);
+	/* We didn't find what we were looking for and need to free the parsed data. */
 	json_value_free(parsed);
+finally:
+	/* We've encountered a problem and we need to free the mastodon_command. */
+	mc_free(mc);
 }
 
 /**
@@ -3636,14 +3647,14 @@ static void mastodon_http_list_reload(struct http_request *req) {
 	struct im_connection *ic = req->data;
 
 	if (!g_slist_find(mastodon_connections, ic)) {
-		goto finish;
+		return;
 	}
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		/* ic would have been freed in imc_logout in this situation */
 		ic = NULL;
-		goto finish;
+		return;
 	}
 
 	if (parsed->type != json_array || parsed->u.array.length == 0) {
