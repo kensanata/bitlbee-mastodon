@@ -110,6 +110,7 @@ struct mastodon_command {
 	struct im_connection *ic;
 	guint64 id;
 	guint64 id2;
+	gboolean extra;
 	char *str;
 	char *undo;
 	char *redo;
@@ -1588,7 +1589,6 @@ void mastodon_flush_timeline(struct im_connection *ic)
 		}
 	}
 
-	// See if the user wants to see the messages in a groupchat window or as private messages.
 	while (output) {
 		struct mastodon_status *ms = output->data;
 		mastodon_status_show(ic, ms);
@@ -3196,6 +3196,7 @@ static void mastodon_http_following(struct http_request *req)
 
 finish:
 	json_value_free(parsed);
+	gboolean done = TRUE;
 
 	// try to fetch more if there is a header saying that there is
 	// more (URL in angled brackets)
@@ -3237,11 +3238,18 @@ finish:
 			}
 
 			mastodon_http(ic, url, mastodon_http_following, ic, HTTP_GET, args, len);
+			done = FALSE;
 
 			g_strfreev(args);
 		}
 
 		g_free(header);
+	}
+
+	if (done) {
+		/* Now that we have reached the end of the list, everybody has mastodon_user_data set, at last: imcb_add_buddy →
+		   bee_user_new → ic->acc->prpl->buddy_data_add → mastodon_buddy_data_add. Now we're ready to (re)load lists. */
+		mastodon_list_reload(ic, TRUE);
 	}
 
 	struct mastodon_data *md = ic->proto_data;
@@ -3607,6 +3615,7 @@ void mastodon_unknown_list_remove_account(struct im_connection *ic, guint64 id, 
 
 /**
  * Second callback to reload all the lists. We are getting all the accounts for one of the lists, here.
+ * The mastodon_command (mc) has id (id of the list), str (title of the list), and optionally extra.
  */
 static void mastodon_http_list_reload2(struct http_request *req) {
 	struct mastodon_command *mc = req->data;
@@ -3641,11 +3650,17 @@ static void mastodon_http_list_reload2(struct http_request *req) {
 		}
 	}
 
-	mastodon_log(ic, "Membership of %s reloaded", mc->str);
+	mastodon_log(ic, "Membership of %s list reloaded", mc->str);
 
 finish:
-	/* We didn't find what we were looking for and need to free the parsed data. */
 	json_value_free(parsed);
+
+	if (mc->extra) {
+		/* Keep using the mc and don't free it! */
+		mastodon_list_timeline(ic, mc);
+		return;
+	}
+
 finally:
 	/* We've encountered a problem and we need to free the mastodon_command. */
 	mc_free(mc);
@@ -3653,21 +3668,21 @@ finally:
 
 /**
  * First callback to reload all the lists. We are getting all the lists, here. For each one, get the members in the
- * list. Note that we didn't have any data to store so req->data is simply the im_connection (ic), not a
- * mastodon_command (mc).
+ * list. Our mastodon_command (mc) might have the extra attribute set.
  */
 static void mastodon_http_list_reload(struct http_request *req) {
-	struct im_connection *ic = req->data;
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
 
 	if (!g_slist_find(mastodon_connections, ic)) {
-		return;
+		goto finally;
 	}
 
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		/* ic would have been freed in imc_logout in this situation */
 		ic = NULL;
-		return;
+		goto finally;
 	}
 
 	if (parsed->type != json_array || parsed->u.array.length == 0) {
@@ -3697,26 +3712,34 @@ static void mastodon_http_list_reload(struct http_request *req) {
 				(id = mastodon_json_int64(it)) &&
 				(title = json_o_str(a, "title"))) {
 
-				struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
-				mc->ic = ic;
-				mc->id2 = id;
-				mc->str = g_strdup(title);
+				struct mastodon_command *mc2 = g_new0(struct mastodon_command, 1);
+				mc2->ic = ic;
+				mc2->id = id;
+				mc2->str = g_strdup(title);
+				mc2->extra = mc->extra;
 
 				char *url = g_strdup_printf(MASTODON_LIST_ACCOUNTS_URL, id);
-				mastodon_http(ic, url, mastodon_http_list_reload2, mc, HTTP_GET, NULL, 0);
+				mastodon_http(ic, url, mastodon_http_list_reload2, mc2, HTTP_GET, NULL, 0);
 				g_free(url);
 			}
 	}
 
 finish:
 	json_value_free(parsed);
+finally:
+	/* We've encountered a problem and we need to free the mastodon_command. */
+	mc_free(mc);
 }
 
 /**
- * Reload the memberships of all the lists. We need this for mastodon_status_show_chat().
+ * Reload the memberships of all the lists. We need this for mastodon_status_show_chat(). The populate parameter says
+ * whether we should issue a timeline request for every list we have a group chat for, at the end.
  */
-void mastodon_list_reload(struct im_connection *ic) {
-	mastodon_http(ic, MASTODON_LIST_URL, mastodon_http_list_reload, ic, HTTP_GET, NULL, 0);
+void mastodon_list_reload(struct im_connection *ic, gboolean populate) {
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+	mc->extra = populate;
+	mastodon_http(ic, MASTODON_LIST_URL, mastodon_http_list_reload, mc, HTTP_GET, NULL, 0);
 }
 
 /**

@@ -363,7 +363,6 @@ static void mastodon_connect(struct im_connection *ic)
 
 	mastodon_initial_timeline(ic);
 	mastodon_open_user_stream(ic);
-	mastodon_list_reload(ic);
 	ic->flags |= OPT_PONGS;
 }
 
@@ -794,9 +793,10 @@ static struct groupchat *mastodon_chat_join(struct im_connection *ic,
 		mastodon_hashtag_timeline(ic, topic + 1);
 		req = mastodon_open_hashtag_stream(ic, topic + 1);
 	} else {
-		/* Unfortunately, this will search twice for a list matchig topic. In addition to that, as we need to identify
-		 * the list we're going to stream, we cannot return a request from here. Instead, pass the channel along. */
-		mastodon_unknown_list_timeline(ic, topic);
+		/* At this point we cannot be sure that an initial timeline will work because at login time the lists are not
+		   loaded, yet. That's why mastodon_following() will end up reloading the lists with the extra parameter which
+		   will load these timelines. In addition to that, as we need to identify the list we're going to stream, we
+		   cannot return a request from here. Instead, pass the channel along. */
 		mastodon_open_unknown_list_stream(ic, c, topic);
 	}
 	g_free(topic);
@@ -1542,7 +1542,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			if (cmd[2]) {
 				mastodon_log(ic, "List reloading takes no argument");
 			} else {
-				mastodon_list_reload(ic);
+				mastodon_list_reload(ic, FALSE);
 			}
 		} else if (g_ascii_strcasecmp(cmd[1], "delete") == 0) {
 			if (!cmd[2]) {

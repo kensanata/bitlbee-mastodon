@@ -134,4 +134,4 @@ void mastodon_unknown_list_accounts(struct im_connection *ic, char *title);
 void mastodon_unknown_list_delete(struct im_connection *ic, char *title);
 void mastodon_unknown_list_add_account(struct im_connection *ic, guint64 id, char *title);
 void mastodon_unknown_list_remove_account(struct im_connection *ic, guint64 id, char *title);
-void mastodon_list_reload(struct im_connection *ic);
+void mastodon_list_reload(struct im_connection *ic, gboolean populate);
