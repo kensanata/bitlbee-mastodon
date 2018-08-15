@@ -161,7 +161,9 @@ static gboolean mastodon_length_check(struct im_connection *ic, gchar *msg, char
 		return FALSE;
 	}
 
-	len+= g_utf8_strlen(cw, -1);
+	if (cw != NULL) {
+		len += g_utf8_strlen(cw, -1);
+	}
 
 	int max = set_getint(&ic->acc->set, "message_length");
 	if (max == 0) {
