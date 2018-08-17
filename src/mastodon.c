@@ -668,7 +668,8 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 					text = g_strdup_printf("%s %s", m->str, message + wlen + 1);
 					g_string_free(m, TRUE);
 
-				} else if (strcmp(who, md->user) == 0) {
+				} else if (g_ascii_strcasecmp(who, md->user) == 0) {
+					/* Compare case-insensitively because this is user input. */
 
 					/* Same as a above but replying to myself and therefore using mastodon_data
 					   (md). We don't set this data to NULL because we might want to send multiple
@@ -874,7 +875,8 @@ static bee_user_t *mastodon_user_by_nick(struct im_connection *ic, char *nick)
 	for (l = ic->bee->users; l; l = l->next) {
 		bee_user_t *bu = l->data;
 		irc_user_t *iu = bu->ui_data;
-		if (strcmp(iu->nick, nick) == 0) {
+		if (g_ascii_strcasecmp(iu->nick, nick) == 0) {
+			/* Compare case-insentively because this is user input. */
 			return bu;
 		}
 	}
