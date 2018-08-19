@@ -1828,7 +1828,7 @@ static void mastodon_http_callback(struct http_request *req)
 	case MC_POST:
 		ms = mastodon_xt_get_status(parsed, ic);
 		gint64 id = set_getint(&ic->acc->set, "account_id");
-		if (ms && ms->id && ms->id == id) {
+		if (ms && ms->id && ms->account->id == id) {
 			/* we posted this status */
 			md->last_id = ms->id;
 			md->last_visibility = ms->visibility;
