@@ -120,7 +120,7 @@ struct mastodon_log_data;
 #define MASTODON_MAX_UNDO 10
 
 struct mastodon_data {
-	char* user;
+	char* user; /* to be used when parsing commands */
 	struct oauth2_service *oauth2_service;
 	char *oauth2_access_token;
 
