@@ -56,6 +56,10 @@ These settings will affect Mastodon accounts:
 * **set hide_sensitive** - hide content marked as sensitive
 * **set sensitive_flag** - text to flag sensitive content with
 * **set visibility** - default post privacy
+* **set hide_boosts** - hide notifications of people boosting
+* **set hide_favourites** - hide notifications of favourites
+* **set hide_follows** - hide notifications of follows
+* **set hide_mentions** - hide notifications of mentions
 
 Use **help** to learn more about these options.
 
@@ -81,7 +85,7 @@ By default, sensitive content (content behind a content warning) is simply shown
 
 > **&lt;somebody&gt;** [27] [CW: this is the warning] \*NSFW\* this is the text  
 
-If you set this variable, sensitive content is not printed. Instead, you'll see "[hidden: &lt;the URL&gt;]". If you still want to read it, visit the URL.
+If you set this variable in the control channel (**&bitlbee**), sensitive content is not printed. Instead, you'll see "[hidden: &lt;the URL&gt;]". If you still want to read it, visit the URL.
 
 > **&lt;kensanata&gt;** account mastodon set hide_sensitive true  
 > **&lt;kensanata&gt;** save  
@@ -108,16 +112,68 @@ All sensitive content is also marked as Not Safe For Work (NSFW) and flagged as 
 > **Scope:** account  
 > **Default:** "\*NSFW\* "  
 
-This is the text to flag sensitive content with. The default is Not Safe For Work (NSFW). If you wanted to simply use red for the sensitive content, you could use "^C5", for example. Be sure to use an actual Control-C, here. This might be challenging to enter, depending on your IRC client. Sadly, that's how it goes. For more information, see https://www.mirc.com/colors.html.
+This is the text to flag sensitive content with. You can change this setting in the control channel (**&bitlbee**). The default is Not Safe For Work (NSFW). If you wanted to simply use red for the sensitive content, you could use "^C5", for example. Be sure to use an actual Control-C, here. This might be challenging to enter, depending on your IRC client. Sadly, that's how it goes. For more information, see https://www.mirc.com/colors.html.
 
 ## set visibility
 > **Type:** string  
 > **Scope:** account  
 > **Default:** "public"  
 
-This is the default visibility of your toots. There are three valid options: "public" (everybody can see your toots), "unlisted" (everybody can see your toots but they are not found on the public timelines), and "private" (only followers can see them). For more information see https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/User-guide.md#toot-privacy. This is used whenever you make a new post. You can override this visibility for new posts. See *[post](#post)* for more.
+This is the default visibility of your toots. There are three valid options: "public" (everybody can see your toots), "unlisted" (everybody can see your toots but they are not found on the public timelines), and "private" (only followers can see them). For more information see https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/User-guide.md#toot-privacy. This is used whenever you make a new post. You can override this visibility for new posts in the control channel (**&bitlbee**). See *[post](#post)* for more.
 
 > **&lt;kensanata&gt;** account mastodon set visibility private  
+> **&lt;kensanata&gt;** save  
+
+Don't forget to save your settings.
+
+## set hide_boosts
+> **Type:** boolean  
+> **Scope:** account  
+> **Default:** false  
+> **Possible Values:** true, false  
+
+By default, you are shown a notification when somebody boosts a status of yours. This setting allows you to turn it off in the control channel (**&bitlbee**).
+
+> **&lt;kensanata&gt;** account mastodon set hide_boosts true  
+> **&lt;kensanata&gt;** save  
+
+Don't forget to save your settings.
+
+## set hide_favourites
+> **Type:** boolean  
+> **Scope:** account  
+> **Default:** false  
+> **Possible Values:** true, false  
+
+By default, you are shown a notification when somebody favourites a status of yours. This setting allows you to turn it off in the control channel (**&bitlbee**).
+
+> **&lt;kensanata&gt;** account mastodon set hide_favourites true  
+> **&lt;kensanata&gt;** save  
+
+Don't forget to save your settings.
+
+## set hide_follows
+> **Type:** boolean  
+> **Scope:** account  
+> **Default:** false  
+> **Possible Values:** true, false  
+
+By default, you are shown a notification when somebody follows you. This setting allows you to turn it off in the control channel (**&bitlbee**).
+
+> **&lt;kensanata&gt;** account mastodon set hide_follows true  
+> **&lt;kensanata&gt;** save  
+
+Don't forget to save your settings.
+
+## set hide_mentions
+> **Type:** boolean  
+> **Scope:** account  
+> **Default:** false  
+> **Possible Values:** true, false  
+
+By default, you are shown a notification when somebody mentions you. This setting allows you to turn it off in the control channel (**&bitlbee**).
+
+> **&lt;kensanata&gt;** account mastodon set hide_mentions true  
 > **&lt;kensanata&gt;** save  
 
 Don't forget to save your settings.
@@ -404,4 +460,6 @@ Don't forget to **save** your config.
 
 ## notifications
 Use **notifications** to show the most recent notifications again. Use **more** to show more notifications.
+
+Note that there are settigns to hide notifications of a particular kind. Once you do that, the **notifications** and **more** commands may show less output, or none at all, as the display of some notifications is suppressed. See **help set hide_boosts**, **help set hide_favourites**, **help set hide_follows**, and **help set hide_mentions**.
 

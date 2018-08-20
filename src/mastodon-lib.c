@@ -1120,7 +1120,25 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
 
 static void mastodon_notification_show(struct im_connection *ic, struct mastodon_notification *notification)
 {
-	mastodon_status_show(ic, mastodon_notification_to_status(notification));
+	gboolean show = TRUE;
+
+	switch (notification->type) {
+	case MN_MENTION:
+		show = !set_getbool(&ic->acc->set, "hide_mentions");
+		break;
+	case MN_REBLOG:
+		show = !set_getbool(&ic->acc->set, "hide_boosts");
+		break;
+	case MN_FAVOURITE:
+		show = !set_getbool(&ic->acc->set, "hide_favourites");
+		break;
+	case MN_FOLLOW:
+		show = !set_getbool(&ic->acc->set, "hide_follows");
+		break;
+	}
+
+	if (show)
+		mastodon_status_show(ic, mastodon_notification_to_status(notification));
 }
 
 /**

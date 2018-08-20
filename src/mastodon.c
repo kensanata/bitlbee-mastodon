@@ -276,10 +276,14 @@ static void mastodon_init(account_t * acc)
 	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "hide_sensitive", "false", set_eval_hide_sensitive, acc);
-
 	s = set_add(&acc->set, "sensitive_flag", "*NSFW* ", NULL, acc);
 
 	s = set_add(&acc->set, "visibility", "public", set_eval_visibility, acc);
+
+	s = set_add(&acc->set, "hide_boosts", "false", set_eval_bool, acc);
+	s = set_add(&acc->set, "hide_favourites", "false", set_eval_bool, acc);
+	s = set_add(&acc->set, "hide_mentions", "false", set_eval_bool, acc);
+	s = set_add(&acc->set, "hide_follows", "false", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "app_id", "0", set_eval_int, acc);
 	s->flags |= SET_HIDDEN;
@@ -488,13 +492,16 @@ static void mastodon_logout(struct im_connection *ic)
 
 		g_slist_free(md->streams); md->streams = NULL;
 
-		int i;
-		for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
-			g_slist_free_full(md->log[i].mentions, g_free); md->log[i].mentions = NULL;
-			g_free(md->log[i].spoiler_text);
+		if (md->log) {
+			/* When mastodon_connect hasn't been called, yet, such as when imc_logout is being called from
+			 * mastodon_login, the log hasn not yet been initialised. */
+			int i;
+			for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
+				g_slist_free_full(md->log[i].mentions, g_free); md->log[i].mentions = NULL;
+				g_free(md->log[i].spoiler_text);
+			}
+			g_free(md->log); md->log = NULL;
 		}
-
-		g_free(md->log); md->log = NULL;
 
 		g_slist_free_full(md->mentions, g_free); md->mentions = NULL;
 		g_free(md->last_spoiler_text); md->last_spoiler_text = NULL;
@@ -514,8 +521,8 @@ static void mastodon_logout(struct im_connection *ic)
 }
 
 /**
- * When the user replies to the MASTODON_OAUTH_HANDLE with a refresh token we request the access token and this is where we get it.
- * Save both in our settings and proceed to mastodon_connect.
+ * When the user replies to the MASTODON_OAUTH_HANDLE with a refresh token we request the access token and this is where
+ * we get it. Save both in our settings and proceed to mastodon_connect.
  */
 void oauth2_got_token(gpointer data, const char *access_token, const char *refresh_token, const char *error)
 {
