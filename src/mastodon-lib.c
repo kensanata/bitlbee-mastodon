@@ -104,6 +104,22 @@ struct mastodon_report {
 	char *comment;
 };
 
+typedef enum {
+	MF_HOME            = 0x00001,
+	MF_NOTIFICATIONS   = 0x00002,
+	MF_PUBLIC          = 0x00004,
+	MF_THREAD          = 0x00008,
+} mastodon_filter_type_t;
+
+struct mastodon_filter {
+	guint64 id;
+	char* phrase;
+	mastodon_filter_type_t context;
+	gboolean irreversible;
+	gboolean whole_word;
+	time_t expires_in;
+};
+
 struct mastodon_command {
 	struct im_connection *ic;
 	guint64 id;
@@ -214,6 +230,18 @@ static void mr_free(struct mastodon_report *mr)
 
 	g_free(mr->comment);
 	g_free(mr);
+}
+
+/**
+ * Frees a mastodon_filter struct.
+ */
+static void mf_free(struct mastodon_filter *mf)
+{
+	if (mf == NULL) {
+		return;
+	}
+	g_free(mf->phrase);
+	g_free(mf);
 }
 
 /**
@@ -3773,6 +3801,119 @@ void mastodon_list_reload(struct im_connection *ic, gboolean populate) {
 	mc->extra = populate;
 	mastodon_http(ic, MASTODON_LIST_URL, mastodon_http_list_reload, mc, HTTP_GET, NULL, 0);
 }
+
+/**
+ * Free the md->filter list so that it can be done from mastodon_logout().
+ */
+void mastodon_filters_destroy(struct mastodon_data *md) {
+	GSList *l;
+	for (l = md->filters; l; l = g_slist_next(l)) {
+		mf_free((struct mastodon_filter *) l->data);
+	}
+	g_slist_free(md->filters);
+	md->filters = NULL;
+}
+
+/**
+ * Parse the context attribute of a Mastodon filter.
+ */
+mastodon_filter_type_t mastodon_parse_context(json_value *parsed)
+{
+	mastodon_filter_type_t context = 0;
+
+	int i;
+	for (i = 0; i < parsed->u.array.length; i++) {
+		json_value *s = parsed->u.array.values[i];
+		if (s->type == json_string) {
+			if (g_ascii_strcasecmp(s->u.string.ptr, "home") == 0)
+				context |= MF_HOME;
+			if (g_ascii_strcasecmp(s->u.string.ptr, "notifications") == 0)
+				context |= MF_NOTIFICATIONS;
+			if (g_ascii_strcasecmp(s->u.string.ptr, "public") == 0)
+				context |= MF_PUBLIC;
+			if (g_ascii_strcasecmp(s->u.string.ptr, "thread") == 0)
+				context |= MF_THREAD;
+		}
+	}
+	return context;
+}
+
+/**
+ * Callback for loading and displaying filters.
+ */
+void mastodon_http_filters (struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	struct mastodon_data *md = ic->proto_data;
+
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		return;
+	}
+
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		goto finish;
+	}
+
+	mastodon_filters_destroy(md);
+
+	int i;
+
+	for (i = 0; i < parsed->u.array.length; i++) {
+			json_value *a = parsed->u.array.values[i];
+			json_value *it;
+			guint64 id = 0;
+			const char *phrase;
+			if (a->type == json_object &&
+				(it = json_o_get(a, "id")) &&
+				(id = mastodon_json_int64(it)) &&
+				(phrase = json_o_str(a, "phrase"))) {
+
+				struct mastodon_filter *mf = g_new0(struct mastodon_filter, 1);
+				mf->id = id;
+				mf->phrase = g_strdup(phrase);
+				if ((it = json_o_get(a, "context")) && it->type == json_array)
+					mf->context = mastodon_parse_context(it);
+				if ((it = json_o_get(a, "irreversible")) && it->type == json_boolean)
+					mf->irreversible = it->u.boolean;
+				if ((it = json_o_get(a, "whole_word")) && it->type == json_boolean)
+					mf->whole_word = it->u.boolean;
+
+				struct tm time;
+				if ((it = json_o_get(a, "expires_in")) && it->type == json_string &&
+					strptime(it->u.string.ptr, MASTODON_TIME_FORMAT, &time) != NULL)
+					mf->expires_in = mktime_utc(&time);
+
+				mastodon_log(ic, "%d. %s [%d:%s%s%s%s%s%s]", i + 1, mf->phrase, mf->id,
+							 mf->context & MF_HOME ? "H" : "",
+							 mf->context & MF_NOTIFICATIONS ? "N" : "",
+							 mf->context & MF_PUBLIC ? "P" : "",
+							 mf->context & MF_THREAD ? "T" : "",
+							 mf->irreversible ? "I" : "",
+							 mf->whole_word ? "W" : "");
+			}
+	}
+
+finish:
+	json_value_free(parsed);
+}
+
+/**
+ * Load and display the filters from the instance.
+ */
+void mastodon_filters(struct im_connection *ic)
+{
+		mastodon_http(ic, MASTODON_FILTER_URL, mastodon_http_filters, ic, HTTP_GET, NULL, 0);
+}
+
+void mastodon_filter_create(struct im_connection *ic, char *args);
+void mastodon_filter_delete(struct im_connection *ic, char *arg);
 
 /**
  * Callback for getting your own account. This saves the account_id.

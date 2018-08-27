@@ -503,6 +503,8 @@ static void mastodon_logout(struct im_connection *ic)
 			g_free(md->log); md->log = NULL;
 		}
 
+		mastodon_filters_destroy(md);
+
 		g_slist_free_full(md->mentions, g_free); md->mentions = NULL;
 		g_free(md->last_spoiler_text); md->last_spoiler_text = NULL;
 		g_free(md->spoiler_text); md->spoiler_text = NULL;
@@ -1590,6 +1592,22 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			g_strfreev(args);
 		} else {
 			mastodon_unknown_list_accounts(ic, message + 5); // "list %s"
+		}
+	} else if (g_ascii_strcasecmp(cmd[0], "filter") == 0) {
+		if (!cmd[1]) {
+			mastodon_filters(ic);
+		} else if (g_ascii_strcasecmp(cmd[1], "create") == 0) {
+			if (!cmd[2]) {
+				mastodon_log(ic, "What do you want to filter?");
+			} else {
+				mastodon_filter_create(ic, message + 14); // "filter create %s"
+			}
+		} else if (g_ascii_strcasecmp(cmd[1], "delete") == 0) {
+			if (!cmd[2]) {
+				mastodon_log(ic, "Which filter should be deleted? Use filter to find out.");
+			} else {
+				mastodon_filter_delete(ic, cmd[2]);
+			}
 		}
 	} else if (g_ascii_strcasecmp(cmd[0], "reply") == 0) {
 		if (!cmd[1] || !cmd[2]) {

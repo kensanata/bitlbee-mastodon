@@ -135,7 +135,7 @@ struct mastodon_data {
 	guint64 seen_id; /* For deduplication */
 	mastodon_flags_t flags;
 
-	GHashTable *member; /* of ma->acct and GSList of char *title point to md->lists */
+	GSList *filters; /* of struct mastodon_filter */
 
 	guint64 last_id; /* Information about our last status posted */
 	mastodon_visibility_t last_visibility;
