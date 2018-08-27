@@ -3839,9 +3839,10 @@ mastodon_filter_type_t mastodon_parse_context(json_value *parsed)
 }
 
 /**
- * Callback for loading and displaying filters.
+ * Callback for loading filters. We need to do this when connecting to the instance, and we want to do it when
+ * displaying the filters.
  */
-void mastodon_http_filters (struct http_request *req)
+void mastodon_http_filters_load (struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct mastodon_data *md = ic->proto_data;
@@ -3890,18 +3891,37 @@ void mastodon_http_filters (struct http_request *req)
 					strptime(it->u.string.ptr, MASTODON_TIME_FORMAT, &time) != NULL)
 					mf->expires_in = mktime_utc(&time);
 
-				mastodon_log(ic, "%d. %s [%d:%s%s%s%s%s%s]", i + 1, mf->phrase, mf->id,
-							 mf->context & MF_HOME ? "H" : "",
-							 mf->context & MF_NOTIFICATIONS ? "N" : "",
-							 mf->context & MF_PUBLIC ? "P" : "",
-							 mf->context & MF_THREAD ? "T" : "",
-							 mf->irreversible ? "I" : "",
-							 mf->whole_word ? "W" : "");
+				md->filters = g_slist_prepend(md->filters, mf);
 			}
 	}
 
 finish:
 	json_value_free(parsed);
+}
+
+/**
+ * Callback for reloading and displaying filters.
+ */
+
+void mastodon_http_filters (struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	struct mastodon_data *md = ic->proto_data;
+
+	mastodon_http_filters_load(req);
+
+	GSList *l;
+	int i = 1;
+	for (l = md->filters; l; l = g_slist_next(l)) {
+		struct mastodon_filter *mf = (struct mastodon_filter *) l->data;
+		mastodon_log(ic, "%2d. %s [%d:%s%s%s%s%s%s]", i++, mf->phrase, mf->id,
+					 mf->context & MF_HOME ? "H" : "",
+					 mf->context & MF_NOTIFICATIONS ? "N" : "",
+					 mf->context & MF_PUBLIC ? "P" : "",
+					 mf->context & MF_THREAD ? "T" : "",
+					 mf->irreversible ? "I" : "",
+					 mf->whole_word ? "W" : "");
+	}
 }
 
 /**
