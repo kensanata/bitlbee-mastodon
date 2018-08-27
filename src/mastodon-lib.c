@@ -54,8 +54,6 @@ typedef enum {
 typedef enum {
 	ML_STATUS,
 	ML_NOTIFICATION,
-	ML_USER,
-	ML_ID,
 } mastodon_list_type_t;
 
 struct mastodon_list {
@@ -198,10 +196,6 @@ static void ml_free(struct mastodon_list *ml)
 			ms_free((struct mastodon_status *) l->data);
 		} else if (ml->type == ML_NOTIFICATION) {
 			mn_free((struct mastodon_notification *) l->data);
-		} else if (ml->type == ML_ID) {
-			g_free(l->data);
-		} else if (ml->type == ML_USER) {
-			ma_free(l->data);
 		}
 	}
 
