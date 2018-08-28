@@ -79,7 +79,7 @@
 #define MASTODON_LIST_ACCOUNTS_URL "/lists/%" G_GINT64_FORMAT "/accounts"
 
 #define MASTODON_FILTER_URL "/filters"
-#define MASTODON_FILTER_DATA_URL "/lists/%" G_GINT64_FORMAT
+#define MASTODON_FILTER_DATA_URL "/filters/%" G_GINT64_FORMAT
 
 #define MASTODON_ACCOUNT_RELATIONSHIP_URL "/accounts/relationships"
 
@@ -141,5 +141,5 @@ void mastodon_unknown_list_remove_account(struct im_connection *ic, guint64 id, 
 void mastodon_list_reload(struct im_connection *ic, gboolean populate);
 void mastodon_filters_destroy(struct mastodon_data *md);
 void mastodon_filters(struct im_connection *ic);
-void mastodon_filter_create(struct im_connection *ic, char *args);
+void mastodon_filter_create(struct im_connection *ic, char *str);
 void mastodon_filter_delete(struct im_connection *ic, char *arg);

@@ -80,6 +80,7 @@ struct mastodon_status {
 	GSList *tags;
 	GSList *mentions;
 	mastodon_timeline_type_t subscription; /* This status was created by a timeline subscription */
+	gboolean is_notification; /* This status was created from a notification */
 };
 
 typedef enum {
@@ -128,7 +129,7 @@ struct mastodon_command {
 	char *str;
 	char *undo;
 	char *redo;
-	struct groupchat *c;
+	gpointer *data;
 	mastodon_command_type_t command;
 };
 
@@ -1056,23 +1057,18 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 		ma->display_name = g_strdup("Unknown");
 	}
 
-	// The status in the notification was written by you, it's
-	// account is your account, but now somebody else is doing
-	// something with it. We want to avoid the extra You at the
-	// beginning, "You: [01] @foo boosted your status: bla" should
-	// be "<foo> [01] boosted your status: bla" or "<foo> followed
-	// you".
+	/* The status in the notification was written by you, it's account is your account, but now somebody else is doing
+	 * something with it. We want to avoid the extra You at the beginning, "You: [01] @foo boosted your status: bla"
+	 * should be "<foo> [01] boosted your status: bla" or "<foo> followed you". */
 	if (ms == NULL) {
-		// Could be a FOLLOW notification without status.
+		/* Could be a FOLLOW notification without status. */
 		ms = g_new0(struct mastodon_status, 1);
 		ms->account = ma_copy(notification->account);
 		ms->created_at = notification->created_at;
-		// This ensures that ms will be freed when the notification is freed.
+		/* This ensures that ms will be freed when the notification is freed. */
 		notification->status = ms;
 	} else {
-		// Adopt the account from the notification. The
-		// account will be freed when the notification frees
-		// the status.
+		/* Adopt the account from the notification. The account will be freed when the notification frees the status. */
 		ma_free(ms->account);
 		ms->account = ma;
 		notification->account = NULL;
@@ -1102,6 +1098,39 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 }
 
 /**
+ * Test whether a filter applies to the status. Comparison is case sensitive.
+ */
+gboolean mastodon_filter_matches(struct mastodon_status *ms, struct mastodon_filter *mf)
+{
+	if (!ms || !ms->content || !mf || !mf->phrase)
+		return FALSE;
+
+	if (!mf->whole_word) {
+		return strstr (ms->content, mf->phrase) != NULL;
+	} else {
+		gchar *s = ms->content;
+		while ((s = strstr (s, mf->phrase))) {
+			int i = s - ms->content;
+			if (i &&
+				g_ascii_isalnum(ms->content[i]) &&
+				g_ascii_isalnum(ms->content[i-1])) {
+				s += strlen(mf->phrase);
+			} else {
+				i += strlen(mf->phrase);
+				if (ms->content[i+1] != '\0' &&
+					g_ascii_isalnum(ms->content[i-1]) &&
+					g_ascii_isalnum(ms->content[i])) {
+					s += i;
+				} else {
+					return TRUE;
+				}
+			}
+		}
+		return FALSE;
+	}
+}
+
+/**
  * Show the status to the user.
  */
 static void mastodon_status_show(struct im_connection *ic, struct mastodon_status *ms)
@@ -1112,23 +1141,34 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
 		return;
 	}
 
-	/* Deduplicating only affects the previous status shown. Thus,
-	 * if we got mentioned in a toot by a user that we're
-	 * following, chances are that both events will arrive in
-	 * sequence. In this case, the second one will be skipped.
-	 * This will also work when flushing timelines after
-	 * connecting: notification and status update should be close
-	 * to each other. This will fail if the stream is really busy.
-	 * Critically, it won't suppress statuses from later context
-	 * and timeline requests. */
+	/* Must check all the filters. */
+	GSList *l;
+	for (l = md->filters; l; l = g_slist_next(l)) {
+		struct mastodon_filter *mf = (struct mastodon_filter *) l->data;
+		/* MF_HOME filter applies to the home timeline, MF_PUBLIC applies to the local and federated public timelines,
+		 * MF_NOTIFICATION applies to any notifications received. */
+		if (((mf->context & MF_HOME && ms->subscription == MT_HOME) ||
+			 (mf->context & MF_PUBLIC && (ms->subscription == MT_LOCAL || ms->subscription == MT_FEDERATED)) ||
+			 (mf->context & MF_NOTIFICATIONS && ms->is_notification) ||
+			 mf->context & MF_THREAD) &&
+			mastodon_filter_matches(ms, mf)) {
+			/* Do not show. */
+			return;
+		}
+	}
+
+	/* Deduplicating only affects the previous status shown. Thus, if we got mentioned in a toot by a user that we're
+	 * following, chances are that both events will arrive in sequence. In this case, the second one will be skipped.
+	 * This will also work when flushing timelines after connecting: notification and status update should be close to
+	 * each other. This will fail if the stream is really busy. Critically, it won't suppress statuses from later
+	 * context and timeline requests. */
 	if (ms->id == md->seen_id) {
 		return;
 	} else {
 		md->seen_id = ms->id;
 	}
 
-	/* Grrrr. Would like to do this during parsing, but can't access
-	   settings from there. */
+	/* Grrrr. Would like to do this during parsing, but can't access settings from there. */
 	if (set_getbool(&ic->acc->set, "strip_newlines")) {
 		strip_newlines(ms->text);
 	}
@@ -1170,8 +1210,10 @@ static void mastodon_stream_handle_notification(struct im_connection *ic, json_v
 {
 	struct mastodon_notification *mn = mastodon_xt_get_notification(parsed, ic);
 	if (mn) {
-		if (mn->status)
+		if (mn->status) {
 			mn->status->subscription = subscription;
+			mn->status->is_notification = TRUE;
+		}
 		mastodon_notification_show(ic, mn);
 		mn_free(mn);
 	}
@@ -1392,7 +1434,8 @@ void mastodon_list_stream(struct im_connection *ic, struct mastodon_command *mc)
 	mastodon_stream(ic, req);
 	/* We cannot return req here because this is a callback (as we had to figure out the list id before getting here).
 	 * This is why we must rely on the groupchat being part of mastodon_command (mc). */
-	mc->c->data = req;
+	struct groupchat *c = (struct groupchat *) mc->data;
+	c->data = req;
 }
 
 /**
@@ -1408,7 +1451,7 @@ void mastodon_open_unknown_list_stream(struct im_connection *ic, struct groupcha
 {
 	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
 	mc->ic = ic;
-	mc->c = c;
+	mc->data = (gpointer *) c;
 	mc->str = g_strdup(title);
 	mastodon_with_named_list(ic, mc, mastodon_http_list_stream);
 }
@@ -1936,6 +1979,8 @@ static void mastodon_http_callback(struct http_request *req)
 	case MC_LIST_DELETE:
 	case MC_LIST_ADD_ACCOUNT:
 	case MC_LIST_REMOVE_ACCOUNT:
+	case MC_FILTER_CREATE:
+	case MC_FILTER_DELETE:
 	case MC_DELETE:
 		md->last_id = 0;
 		mastodon_do(ic, mc->redo, mc->undo);
@@ -2174,6 +2219,8 @@ void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type
 		case MC_LIST_DELETE:
 		case MC_LIST_ADD_ACCOUNT:
 		case MC_LIST_REMOVE_ACCOUNT:
+		case MC_FILTER_CREATE:
+		case MC_FILTER_DELETE:
 			/* These commands should not be calling mastodon_post. Instead, call mastodon_post_status or whatever else
 			 * is required. */
 			break;
@@ -3404,11 +3451,6 @@ void mastodon_list_create(struct im_connection *ic, char *title) {
 }
 
 /**
- * Rename a list.
- */
-void mastodon_list_update(struct im_connection *ic, guint64 id, char *title);
-
-/**
  * Second callback for the list of accounts.
  */
 void mastodon_http_list_accounts2(struct http_request *req) {
@@ -3839,6 +3881,40 @@ mastodon_filter_type_t mastodon_parse_context(json_value *parsed)
 }
 
 /**
+ * Parse a filter.
+ */
+struct mastodon_filter *mastodon_parse_filter (json_value *parsed)
+{
+	json_value *it;
+	guint64 id = 0;
+	const char *phrase;
+	if (parsed && parsed->type == json_object &&
+		(it = json_o_get(parsed, "id")) &&
+		(id = mastodon_json_int64(it)) &&
+		(phrase = json_o_str(parsed, "phrase"))) {
+
+		struct mastodon_filter *mf = g_new0(struct mastodon_filter, 1);
+		mf->id = id;
+		mf->phrase = g_strdup(phrase);
+
+		if ((it = json_o_get(parsed, "context")) && it->type == json_array)
+			mf->context = mastodon_parse_context(it);
+		if ((it = json_o_get(parsed, "irreversible")) && it->type == json_boolean)
+			mf->irreversible = it->u.boolean;
+		if ((it = json_o_get(parsed, "whole_word")) && it->type == json_boolean)
+			mf->whole_word = it->u.boolean;
+
+		struct tm time;
+		if ((it = json_o_get(parsed, "expires_in")) && it->type == json_string &&
+			strptime(it->u.string.ptr, MASTODON_TIME_FORMAT, &time) != NULL)
+			mf->expires_in = mktime_utc(&time);
+
+		return mf;
+	}
+	return NULL;
+}
+
+/**
  * Callback for loading filters. We need to do this when connecting to the instance, and we want to do it when
  * displaying the filters.
  */
@@ -3867,32 +3943,10 @@ void mastodon_http_filters_load (struct http_request *req)
 	int i;
 
 	for (i = 0; i < parsed->u.array.length; i++) {
-			json_value *a = parsed->u.array.values[i];
-			json_value *it;
-			guint64 id = 0;
-			const char *phrase;
-			if (a->type == json_object &&
-				(it = json_o_get(a, "id")) &&
-				(id = mastodon_json_int64(it)) &&
-				(phrase = json_o_str(a, "phrase"))) {
-
-				struct mastodon_filter *mf = g_new0(struct mastodon_filter, 1);
-				mf->id = id;
-				mf->phrase = g_strdup(phrase);
-				if ((it = json_o_get(a, "context")) && it->type == json_array)
-					mf->context = mastodon_parse_context(it);
-				if ((it = json_o_get(a, "irreversible")) && it->type == json_boolean)
-					mf->irreversible = it->u.boolean;
-				if ((it = json_o_get(a, "whole_word")) && it->type == json_boolean)
-					mf->whole_word = it->u.boolean;
-
-				struct tm time;
-				if ((it = json_o_get(a, "expires_in")) && it->type == json_string &&
-					strptime(it->u.string.ptr, MASTODON_TIME_FORMAT, &time) != NULL)
-					mf->expires_in = mktime_utc(&time);
-
-				md->filters = g_slist_prepend(md->filters, mf);
-			}
+		json_value *it = parsed->u.array.values[i];
+		struct mastodon_filter *mf = mastodon_parse_filter(it);
+		if (mf)
+			md->filters = g_slist_prepend(md->filters, mf);
 	}
 
 finish:
@@ -3902,7 +3956,6 @@ finish:
 /**
  * Callback for reloading and displaying filters.
  */
-
 void mastodon_http_filters (struct http_request *req)
 {
 	struct im_connection *ic = req->data;
@@ -3914,13 +3967,21 @@ void mastodon_http_filters (struct http_request *req)
 	int i = 1;
 	for (l = md->filters; l; l = g_slist_next(l)) {
 		struct mastodon_filter *mf = (struct mastodon_filter *) l->data;
-		mastodon_log(ic, "%2d. %s [%d:%s%s%s%s%s%s]", i++, mf->phrase, mf->id,
-					 mf->context & MF_HOME ? "H" : "",
-					 mf->context & MF_NOTIFICATIONS ? "N" : "",
-					 mf->context & MF_PUBLIC ? "P" : "",
-					 mf->context & MF_THREAD ? "T" : "",
-					 mf->irreversible ? "I" : "",
-					 mf->whole_word ? "W" : "");
+
+		GString *p = g_string_new(NULL);
+		int mask = MF_HOME|MF_PUBLIC|MF_NOTIFICATIONS|MF_THREAD;
+		if ((mf->context & mask) == mask) {
+			g_string_append(p, " everywhere");
+		} else {
+			if (mf->context & MF_HOME) { g_string_append(p, " home"); }
+			if (mf->context & MF_PUBLIC) { g_string_append(p, " public"); }
+			if (mf->context & MF_NOTIFICATIONS) { g_string_append(p, " notifications"); }
+			if (mf->context & MF_THREAD) { g_string_append(p, " thread"); }
+		}
+		if (mf->irreversible) { g_string_append(p, ", server side"); }
+		if (mf->whole_word) { g_string_append(p, ", whole word"); }
+		mastodon_log(ic, "%2d. %s (properties:%s)", i++, mf->phrase, p->str);
+		g_string_free(p, TRUE);
 	}
 }
 
@@ -3929,11 +3990,136 @@ void mastodon_http_filters (struct http_request *req)
  */
 void mastodon_filters(struct im_connection *ic)
 {
-		mastodon_http(ic, MASTODON_FILTER_URL, mastodon_http_filters, ic, HTTP_GET, NULL, 0);
+	mastodon_http(ic, MASTODON_FILTER_URL, mastodon_http_filters, ic, HTTP_GET, NULL, 0);
 }
 
-void mastodon_filter_create(struct im_connection *ic, char *args);
-void mastodon_filter_delete(struct im_connection *ic, char *arg);
+/**
+ * Callback for filter creation. We need to get the number of the filter created and use that for the undo command.
+ */
+void mastodon_http_filter_create(struct http_request *req)
+{
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		/* ic would have been freed in imc_logout in this situation */
+		ic = NULL;
+		return;
+	}
+
+	struct mastodon_filter *mf = mastodon_parse_filter(parsed);
+	if (mf) {
+		struct mastodon_data *md = ic->proto_data;
+		md->filters = g_slist_prepend(md->filters, mf);
+		mastodon_log(ic, "Filter created");
+		/* Maintain undo/redo list. */
+		mc->undo = g_strdup_printf("filter delete %" G_GUINT64_FORMAT, mf->id);
+		if(md->undo_type == MASTODON_NEW) {
+			mastodon_do(ic, mc->redo, mc->undo);
+		} else {
+			mastodon_do_update(ic, mc->undo);
+		}
+	}
+}
+
+/**
+ * Create a new filter.
+ */
+void mastodon_filter_create(struct im_connection *ic, char *str)
+{
+	struct mastodon_data *md = ic->proto_data;
+
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+
+	if (md->undo_type == MASTODON_NEW) {
+		mc->command = MC_FILTER_CREATE;
+		mc->redo = g_strdup_printf("filter create %s", str);
+	}
+
+	/* FIXME: add timeout */
+	char *args[14] = {
+		"phrase", str,
+		"context[]", "home",
+		"context[]", "notifications",
+		"context[]", "public",
+		"context[]", "thread",
+		"irreversible", "true",
+		"whole_words", "1",
+	};
+	mastodon_http(ic, MASTODON_FILTER_URL, mastodon_http_filter_create, mc, HTTP_POST, args, 14);
+}
+
+/**
+ * Callback for filter deletion.
+ */
+void mastodon_http_filter_delete(struct http_request *req)
+{
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	if (req->status_code == 200) {
+		struct mastodon_data *md = ic->proto_data;
+		struct mastodon_filter *mf = (struct mastodon_filter *) mc->data;
+		md->filters = g_slist_remove(md->filters, mf);
+		mastodon_http_callback_and_ack(req);
+	}
+}
+
+/**
+ * Delete a filter based on the item number when listing them.
+ */
+void mastodon_filter_delete(struct im_connection *ic, char *arg)
+{
+	guint64 id;
+	if (!parse_int64(arg, 10, &id)) {
+	    mastodon_log(ic, "You must refer to a filter number. Use 'filter' to list them.");
+	    return;
+    }
+
+	struct mastodon_data *md = ic->proto_data;
+	/* filters are listed starting at 1 */
+	struct mastodon_filter *mf = (struct mastodon_filter *) g_slist_nth_data(md->filters, id - 1);
+
+	if (!mf) {
+		GSList *l;
+		gboolean found = FALSE;
+		for (l = md->filters; l; l = g_slist_next(l)) {
+			mf = (struct mastodon_filter *) l->data;
+			if (mf->id == id) {
+				found = TRUE;
+				break;
+            }
+        }
+		if (!found) {
+			mastodon_log(ic, "This filter is unkown. Use 'filter' to list them.");
+			return;
+		}
+	}
+
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+	mc->data = (gpointer *) mf;
+	if (md->undo_type == MASTODON_NEW) {
+		mc->command = MC_FILTER_DELETE;
+		/* FIXME: more parameters */
+		mc->redo = g_strdup_printf("filter delete %" G_GUINT64_FORMAT, mf->id);
+		mc->undo = g_strdup_printf("filter create %s", mf->phrase);
+	}
+
+	char *url = g_strdup_printf(MASTODON_FILTER_DATA_URL, mf->id);
+	mastodon_http(ic, url, mastodon_http_filter_delete, mc, HTTP_DELETE, NULL, 0);
+	g_free(url);
+}
 
 /**
  * Callback for getting your own account. This saves the account_id.

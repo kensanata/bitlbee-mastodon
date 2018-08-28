@@ -1327,7 +1327,11 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 				/* find length of null-terminated vector */
 				int i = 0;
 				for (; args[i]; i++);
-				mastodon_raw(ic, cmd[1], cmd[2], args, i);
+				if (i % 2) {
+					mastodon_log(ic, "Wrong number of arguments. Did you forget the URL?");
+				} else {
+					mastodon_raw(ic, cmd[1], cmd[2], args, i);
+				}
 				g_strfreev(args);
 			} else {
 				mastodon_raw(ic, cmd[1], cmd[2], NULL, 0);
@@ -1608,6 +1612,8 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			} else {
 				mastodon_filter_delete(ic, cmd[2]);
 			}
+		} else {
+			mastodon_log(ic, "I only understand the filter subcommands create and delete.");
 		}
 	} else if (g_ascii_strcasecmp(cmd[0], "reply") == 0) {
 		if (!cmd[1] || !cmd[2]) {

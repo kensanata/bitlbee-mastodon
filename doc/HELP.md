@@ -24,6 +24,7 @@ Mastodon is a free, open-source social network server. A decentralized solution 
 * *[hashtag](#hashtag)* - Showing and following a hashtag
 * *[public](#public)* - Showing and following the local or federated timeline
 * *[lists](#lists)* - Managing lists
+* *[filters](#filters)* - Managing filters
 * *[notifications](#notifications)* - Showing your notifications
 * *[set](#set)* - Settings affecting Mastodon accounts
 
@@ -457,6 +458,18 @@ If you want to follow a list, you need to use the control channel, **&bitlbee**.
 > **&lt;kensanata&gt;** /join #important  
 
 Don't forget to **save** your config.
+
+## filters
+You can create filters which remove toots from the output.
+
+These are the commands available:
+> **filter** (to load and see your filters)  
+> **filter create &lt;phrase&gt;**  
+> **filter delete &lt;n&gt;**  
+
+Currently filters are created for all contexts, for whole words, and without an expiration date. Fine grained control over the filters created are planned. Furthermore, for whole words, word edges are weird. For a whole word phrase to match, the beginnin and end of the phrase have to be one of a-z, A-Z, or 0-9, and the character before the phrase and after the phrase must not be one of these. Matching does not care about canonical Unicode form, I'm afraid.
+
+There is currently a **known bug**: when you're logging in, the filters aren't loaded. You have to use the **filter** command to load them.
 
 ## notifications
 Use **notifications** to show the most recent notifications again. Use **more** to show more notifications.
