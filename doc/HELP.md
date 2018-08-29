@@ -476,6 +476,7 @@ Example:
 > **&lt;kensanata&gt;** filter  
 > **&lt;root&gt;**  1. twitter.com (properties: everywhere, server side, whole word)  
 
+Differences from the Mastodon Web UI: case is significant; toots are filtered even if you look at an account timeline or run a search.
 
 ## notifications
 Use **notifications** to show the most recent notifications again. Use **more** to show more notifications.
