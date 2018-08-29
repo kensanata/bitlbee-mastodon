@@ -1105,28 +1105,27 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 }
 
 /**
- * Test whether a filter applies to the status. Comparison is case sensitive.
+ * Test whether a filter applies to the text. Comparison is case sensitive.
  */
-gboolean mastodon_filter_matches(struct mastodon_status *ms, struct mastodon_filter *mf)
+gboolean mastodon_filter_matches_it(char *text, struct mastodon_filter *mf)
 {
-	if (!ms || !ms->text || !mf || !mf->phrase)
-		return FALSE;
+	if (!text) return FALSE;
 
 	if (!mf->whole_word) {
-		return strstr(ms->text, mf->phrase) != NULL;
+		return strstr(text, mf->phrase) != NULL;
 	} else {
-		gchar *s = ms->text;
+		gchar *s = text;
 		while ((s = strstr (s, mf->phrase))) {
-			int i = s - ms->text;
+			int i = s - text;
 			if (i &&
-				g_ascii_isalnum(ms->text[i]) &&
-				g_ascii_isalnum(ms->text[i-1])) {
+				g_ascii_isalnum(text[i]) &&
+				g_ascii_isalnum(text[i-1])) {
 				s += strlen(mf->phrase);
 			} else {
 				i += strlen(mf->phrase);
-				if (ms->text[i+1] != '\0' &&
-					g_ascii_isalnum(ms->text[i-1]) &&
-					g_ascii_isalnum(ms->text[i])) {
+				if (text[i+1] != '\0' &&
+					g_ascii_isalnum(text[i-1]) &&
+					g_ascii_isalnum(text[i])) {
 					s += i;
 				} else {
 					return TRUE;
@@ -1135,6 +1134,17 @@ gboolean mastodon_filter_matches(struct mastodon_status *ms, struct mastodon_fil
 		}
 		return FALSE;
 	}
+}
+
+/**
+ * Test whether a filter applies to the status.
+ */
+gboolean mastodon_filter_matches(struct mastodon_status *ms, struct mastodon_filter *mf)
+{
+	if (!ms || !mf || !mf->phrase)
+		return FALSE;
+	return (mastodon_filter_matches_it(ms->text, mf) ||
+			mastodon_filter_matches_it(ms->spoiler_text, mf));
 }
 
 /**
