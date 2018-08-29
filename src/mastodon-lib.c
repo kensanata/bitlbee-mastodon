@@ -70,8 +70,10 @@ struct mastodon_account {
 struct mastodon_status {
 	time_t created_at;
 	char *spoiler_text;
+	char *spoiler_text_case_folded; /* for filtering */
 	char *text;
 	char *content; /* same as text without CW and NSFW prefixes */
+	char *content_case_folded; /* for filtering */
 	char *url;
 	struct mastodon_account *account;
 	guint64 id;
@@ -115,6 +117,7 @@ typedef enum {
 struct mastodon_filter {
 	guint64 id;
 	char* phrase;
+	char* phrase_case_folded;
 	mastodon_filter_type_t context;
 	gboolean irreversible;
 	gboolean whole_word;
@@ -662,6 +665,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 			mastodon_strip_html(spoiler_text);
 			g_string_append_printf(s, "[CW: %s]", spoiler_text);
 			ms->spoiler_text = spoiler_text;
+			ms->spoiler_text_case_folded = g_utf8_casefold(spoiler_text, -1);
 			if (nsfw || !use_cw1) {
 				g_string_append(s, " ");
 			}
@@ -676,6 +680,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 			char *text = g_strdup(text_value->u.string.ptr);
 			mastodon_strip_html(text);
 			ms->content = g_strdup(text);
+			ms->content_case_folded = g_utf8_casefold(text, -1);
 			char *fmt = "%s";
 			if (spoiler_value && use_cw1) {
 				char *wrapped = NULL;
@@ -1105,32 +1110,52 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 }
 
 /**
- * Test whether a filter applies to the text. Comparison is case sensitive.
+ * Test whether a filter applies to the text.
  */
 gboolean mastodon_filter_matches_it(char *text, struct mastodon_filter *mf)
 {
 	if (!text) return FALSE;
 
 	if (!mf->whole_word) {
-		return strstr(text, mf->phrase) != NULL;
+		return strstr(text, mf->phrase_case_folded) != NULL;
 	} else {
+		/* Find the character at the beginning of the phrase and the character at the end of the phrase. */
+		int len = strlen(mf->phrase_case_folded);
+		gunichar p1 = g_utf8_get_char(mf->phrase_case_folded);
+		gunichar p2 = g_utf8_get_char(g_utf8_prev_char(mf->phrase_case_folded + len));
+		gboolean p1_is_alnum = g_unichar_isalnum(p1);
+		gboolean p2_is_alnum = g_unichar_isalnum(p2);
+
+		/* Start searching from the beginning. When we continue searching because a match is not at word boundaries,
+		   just skip a single character because matches can overlap. */
 		gchar *s = text;
-		while ((s = strstr (s, mf->phrase))) {
-			int i = s - text;
-			if (i &&
-				g_ascii_isalnum(text[i]) &&
-				g_ascii_isalnum(text[i-1])) {
-				s += strlen(mf->phrase);
-			} else {
-				i += strlen(mf->phrase);
-				if (text[i+1] != '\0' &&
-					g_ascii_isalnum(text[i-1]) &&
-					g_ascii_isalnum(text[i])) {
-					s += i;
-				} else {
-					return TRUE;
+		while ((s = strstr (s, mf->phrase_case_folded))) {
+
+			/* At the beginning of the text counts as a word boundary. If the beginning of the phrase is not
+			 * alphanumeric, we don't care about word boundaries. */
+			if (s != text && p1_is_alnum) {
+				/* Find the character before the match. This could potentially be the first character. */
+				gunichar c = g_utf8_get_char(g_utf8_prev_char(s));
+				/* If this is also an alphanumeric character, then this is not a word boundary. */
+				if (g_unichar_isalnum(c)) {
+					s = g_utf8_next_char(s);
+					continue;
 				}
 			}
+
+			/* If the beginning of the phrase is not alphanumeric, we don't care about word boundaries. */
+			if (p2_is_alnum) {
+				/* Find the character after the match. This could potentially be the zero byte. */
+				gunichar c = g_utf8_get_char(g_utf8_prev_char(s) + len);
+				/* If this is the end of the string, or an alphanumeric character, then this is not a word boundary. */
+				if (!c || g_unichar_isalnum(c)) {
+					s = g_utf8_next_char(s);
+					continue;
+				}
+			}
+
+			/* Otherwise we're golden. */
+			return TRUE;
 		}
 		return FALSE;
 	}
@@ -1141,10 +1166,10 @@ gboolean mastodon_filter_matches_it(char *text, struct mastodon_filter *mf)
  */
 gboolean mastodon_filter_matches(struct mastodon_status *ms, struct mastodon_filter *mf)
 {
-	if (!ms || !mf || !mf->phrase)
+	if (!ms || !mf || !mf->phrase_case_folded)
 		return FALSE;
-	return (mastodon_filter_matches_it(ms->text, mf) ||
-			mastodon_filter_matches_it(ms->spoiler_text, mf));
+	return (mastodon_filter_matches_it(ms->content_case_folded, mf) ||
+			mastodon_filter_matches_it(ms->spoiler_text_case_folded, mf));
 }
 
 /**
@@ -3916,6 +3941,7 @@ struct mastodon_filter *mastodon_parse_filter (json_value *parsed)
 		struct mastodon_filter *mf = g_new0(struct mastodon_filter, 1);
 		mf->id = id;
 		mf->phrase = g_strdup(phrase);
+		mf->phrase_case_folded = g_utf8_casefold(phrase, -1);
 
 		if ((it = json_o_get(parsed, "context")) && it->type == json_array)
 			mf->context = mastodon_parse_context(it);
