@@ -1666,7 +1666,8 @@ void mastodon_flush_timeline(struct im_connection *ic)
 	imcb_connected(ic);
 
 	if (!(md->flags & MASTODON_GOT_TIMELINE) ||
-	    !(md->flags & MASTODON_GOT_NOTIFICATIONS)) {
+	    !(md->flags & MASTODON_GOT_NOTIFICATIONS) ||
+	    !(md->flags & MASTODON_GOT_FILTERS)) {
 		return;
 	}
 
@@ -1698,7 +1699,7 @@ void mastodon_flush_timeline(struct im_connection *ic)
 	ml_free(notifications);
 	g_slist_free(output);
 
-	md->flags &= ~(MASTODON_GOT_TIMELINE | MASTODON_GOT_NOTIFICATIONS);
+	md->flags &= ~(MASTODON_GOT_TIMELINE | MASTODON_GOT_NOTIFICATIONS | MASTODON_GOT_FILTERS);
 	md->home_timeline_obj = md->notifications_obj = NULL;
 }
 
@@ -1790,22 +1791,22 @@ static void mastodon_get_notifications(struct im_connection *ic)
 	mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_get_notifications, ic, HTTP_GET, NULL, 0);
 }
 
+static void mastodon_get_filters(struct im_connection *ic);
+
 /**
- * Get the initial timeline. This consists of two things: the home
- * timeline, and notifications. During normal use, these are provided
- * via the Streaming API. However, when we connect to an instance we
- * want to load the home timeline and notifications. In order to sort
- * them in a meaningful way, we use these flags:
- * MASTODON_GOT_TIMELINE to indicate that we now have home timeline,
- * MASTODON_GOT_NOTIFICATIONS to indicate that we now have notifications.
- * Both callbacks will attempt to flush the initial timeline, but this
- * will only succeed if both flags are set.
+ * Get the initial timeline. This consists of three things: the home timeline, notifications, and filters. During normal
+ * use, the timeline and the notifications are provided via the Streaming API. However, when we connect to an instance
+ * we want to load the home timeline and notifications and sort them in a meaningful way. We use flags:
+ * MASTODON_GOT_TIMELINE to indicate that we now have home timeline, MASTODON_GOT_NOTIFICATIONS to indicate that we now
+ * have notifications, and MASTODON_GOT_FILTERS to indicate that we now have filters . All callbacks will attempt to
+ * flush the initial timeline, but this will only succeed if all three flags are set.
  */
 void mastodon_initial_timeline(struct im_connection *ic)
 {
 	imcb_log(ic, "Getting home timeline");
 	mastodon_get_home_timeline(ic);
 	mastodon_get_notifications(ic);
+	mastodon_get_filters(ic);
 	return;
 }
 
@@ -2811,7 +2812,7 @@ void mastodon_flush_context(struct im_connection *ic)
 	ml_free(bl);
 	ms_free(ms);
 
-	md->flags &= ~(MASTODON_GOT_TIMELINE | MASTODON_GOT_NOTIFICATIONS);
+	md->flags &= ~(MASTODON_GOT_STATUS | MASTODON_GOT_CONTEXT);
 	md->status_obj = md->context_before_obj = md->context_after_obj = NULL;
 }
 
@@ -3963,6 +3964,11 @@ void mastodon_http_filters (struct http_request *req)
 
 	mastodon_http_filters_load(req);
 
+	if (!md->filters) {
+		mastodon_log(ic, "There are no filters. Create some using 'filter create'.");
+		return;
+	}
+
 	GSList *l;
 	int i = 1;
 	for (l = md->filters; l; l = g_slist_next(l)) {
@@ -3991,6 +3997,32 @@ void mastodon_http_filters (struct http_request *req)
 void mastodon_filters(struct im_connection *ic)
 {
 	mastodon_http(ic, MASTODON_FILTER_URL, mastodon_http_filters, ic, HTTP_GET, NULL, 0);
+}
+
+/**
+ * Callback for mastodon_get_filters.
+ */
+void mastodon_http_get_filters (struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	struct mastodon_data *md = ic->proto_data;
+
+	mastodon_http_filters_load(req);
+
+	md->flags |= MASTODON_GOT_FILTERS;
+	mastodon_flush_timeline(ic);
+}
+
+/**
+ * See mastodon_initial_timeline.
+ */
+static void mastodon_get_filters(struct im_connection *ic)
+{
+	struct mastodon_data *md = ic->proto_data;
+
+	md->flags &= ~MASTODON_GOT_FILTERS;
+
+	mastodon_http(ic, MASTODON_FILTER_URL, mastodon_http_get_filters, ic, HTTP_GET, NULL, 0);
 }
 
 /**
