@@ -19,7 +19,7 @@ AC_INIT(
   [1.4.0],
   [https://github.com/kensanata/bitlbee-mastodon/issues],
   [bitlbee-mastodon],
-  [https://github.com/kensanata/bitlbee-mastodon],
+  [https://alexschroeder.ch/cgit/bitlbee-mastodon/about/],
 )
 
 AC_CONFIG_AUX_DIR([build-aux])

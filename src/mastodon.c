@@ -73,16 +73,17 @@ static void mastodon_help_init()
 #ifdef BITLBEE_ABI_VERSION_CODE
 struct plugin_info *init_plugin_info(void)
 {
-  static struct plugin_info info = {
-    BITLBEE_ABI_VERSION_CODE,
-    "bitlbee-mastodon",
-    "1.4.0",
-    "Bitlbee plugin for Mastodon <https://joinmastodon.org/>",
-    "Alex Schroeder <alex@gnu.org>",
-    "https://alexschroeder.ch/cgit/bitlbee-mastodon/about/"
-  };
+	/* Run ./configure to change these. */
+	static struct plugin_info info = {
+		BITLBEE_ABI_VERSION_CODE,
+		PACKAGE_NAME,
+		PACKAGE_VERSION,
+		"Bitlbee plugin for Mastodon <https://joinmastodon.org/>",
+		"Alex Schroeder <alex@gnu.org>",
+		"https://alexschroeder.ch/cgit/bitlbee-mastodon/about/"
+	};
 
-  return &info;
+	return &info;
 }
 #endif
 
