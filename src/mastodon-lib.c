@@ -1059,7 +1059,8 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 
 	/* The status in the notification was written by you, it's account is your account, but now somebody else is doing
 	 * something with it. We want to avoid the extra You at the beginning, "You: [01] @foo boosted your status: bla"
-	 * should be "<foo> [01] boosted your status: bla" or "<foo> followed you". */
+	 * should be "<foo> [01] boosted your status: bla" or "<foo> followed you". So we're creating a fake status with a
+	 * copy of the notification account. */
 	if (ms == NULL) {
 		/* Could be a FOLLOW notification without status. */
 		ms = g_new0(struct mastodon_status, 1);
@@ -1073,6 +1074,9 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 		ms->account = ma;
 		notification->account = NULL;
 	}
+
+	/* Make sure filters from the notification context know that this status is from a notification. */
+	ms->is_notification = TRUE;
 
 	char *original = ms->text;
 
@@ -1102,24 +1106,24 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
  */
 gboolean mastodon_filter_matches(struct mastodon_status *ms, struct mastodon_filter *mf)
 {
-	if (!ms || !ms->content || !mf || !mf->phrase)
+	if (!ms || !ms->text || !mf || !mf->phrase)
 		return FALSE;
 
 	if (!mf->whole_word) {
-		return strstr (ms->content, mf->phrase) != NULL;
+		return strstr(ms->text, mf->phrase) != NULL;
 	} else {
-		gchar *s = ms->content;
+		gchar *s = ms->text;
 		while ((s = strstr (s, mf->phrase))) {
-			int i = s - ms->content;
+			int i = s - ms->text;
 			if (i &&
-				g_ascii_isalnum(ms->content[i]) &&
-				g_ascii_isalnum(ms->content[i-1])) {
+				g_ascii_isalnum(ms->text[i]) &&
+				g_ascii_isalnum(ms->text[i-1])) {
 				s += strlen(mf->phrase);
 			} else {
 				i += strlen(mf->phrase);
-				if (ms->content[i+1] != '\0' &&
-					g_ascii_isalnum(ms->content[i-1]) &&
-					g_ascii_isalnum(ms->content[i])) {
+				if (ms->text[i+1] != '\0' &&
+					g_ascii_isalnum(ms->text[i-1]) &&
+					g_ascii_isalnum(ms->text[i])) {
 					s += i;
 				} else {
 					return TRUE;
@@ -1210,10 +1214,10 @@ static void mastodon_stream_handle_notification(struct im_connection *ic, json_v
 {
 	struct mastodon_notification *mn = mastodon_xt_get_notification(parsed, ic);
 	if (mn) {
-		if (mn->status) {
+		/* A follow notification has no status and thus cannot be assigned a subsription (see mastodon_timeline_type_t).
+		 * But if there is a status associated with the notification, we know where it came from. */
+		if (mn->status)
 			mn->status->subscription = subscription;
-			mn->status->is_notification = TRUE;
-		}
 		mastodon_notification_show(ic, mn);
 		mn_free(mn);
 	}
@@ -1660,16 +1664,18 @@ void mastodon_flush_timeline(struct im_connection *ic)
 	if (md == NULL) {
 		return;
 	}
-	home_timeline = md->home_timeline_obj;
-	notifications = md->notifications_obj;
 
 	imcb_connected(ic);
 
+	/* Wait until we have all the data we need. */
 	if (!(md->flags & MASTODON_GOT_TIMELINE) ||
 	    !(md->flags & MASTODON_GOT_NOTIFICATIONS) ||
 	    !(md->flags & MASTODON_GOT_FILTERS)) {
 		return;
 	}
+
+	home_timeline = md->home_timeline_obj;
+	notifications = md->notifications_obj;
 
 	if (home_timeline && home_timeline->list) {
 		for (l = home_timeline->list; l; l = g_slist_next(l)) {
