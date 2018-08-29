@@ -1306,10 +1306,18 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 				     "- info [get|put|post|delete] url [args]");
 		} else if (g_ascii_strcasecmp(cmd[1], "instance") == 0) {
 			mastodon_instance(ic);
-		} else if (g_ascii_strcasecmp(cmd[1], "user") == 0 && cmd[2]) {
-			mastodon_user(ic, cmd[2]);
-		} else if (g_ascii_strcasecmp(cmd[1], "relation") == 0 && cmd[2]) {
-			mastodon_relation_to_user(ic, cmd[2]);
+		} else if (g_ascii_strcasecmp(cmd[1], "user") == 0) {
+			if (cmd[2]) {
+				mastodon_user(ic, cmd[2]);
+			} else {
+				mastodon_log(ic, "User info about whom?");
+			}
+		} else if (g_ascii_strcasecmp(cmd[1], "relation") == 0) {
+			if (cmd[2]) {
+				mastodon_relation_to_user(ic, cmd[2]);
+			} else {
+				mastodon_log(ic, "Relation with whom?");
+			}
 		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
 			mastodon_status(ic, id);
 		}
@@ -1337,8 +1345,8 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 			} else {
 				mastodon_raw(ic, cmd[1], cmd[2], NULL, 0);
 			}
-		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1]))) {
-			mastodon_status(ic, id);
+		} else {
+			mastodon_log(ic, "Usage: 'api [get|put|post|delete] url [name value]*");
 		}
 	} else if (g_ascii_strcasecmp(cmd[0], "undo") == 0) {
 		if (cmd[1] == NULL) {
@@ -1408,13 +1416,13 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		} else {
 			mastodon_log(ic, "I'm confused! Follow whom?");
 		}
-	} else if (g_ascii_strcasecmp(cmd[0], "unfollow") == 0 && cmd[1]) {
+	} else if (g_ascii_strcasecmp(cmd[0], "unfollow") == 0) {
 		if (cmd[1]) {
 			mastodon_remove_buddy(ic, cmd[1], NULL);
 		} else {
 			mastodon_log(ic, "Unfollow whom?");
 		}
-	} else if (g_ascii_strcasecmp(cmd[0], "block") == 0 && cmd[1]) {
+	} else if (g_ascii_strcasecmp(cmd[0], "block") == 0) {
 		if (cmd[1]) {
 			mastodon_add_deny(ic, cmd[1]);
 		} else {
