@@ -800,6 +800,9 @@ static gboolean mastodon_xt_get_status_list(struct im_connection *ic, const json
 	for (i = 0; i < node->u.array.length; i++) {
 		struct mastodon_status *ms = mastodon_xt_get_status(node->u.array.values[i], ic);
 		if (ms) {
+			/* Code that calls this will display the toots in the home timeline, i.e. the account channel. This is true
+			 * right after a login and when displaying search results or a toot context. */
+			ms->subscription = MT_HOME;
 			ml->list = g_slist_prepend(ml->list, ms);
 		}
 	}
