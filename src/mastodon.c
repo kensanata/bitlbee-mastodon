@@ -76,7 +76,7 @@ struct plugin_info *init_plugin_info(void)
   static struct plugin_info info = {
     BITLBEE_ABI_VERSION_CODE,
     "bitlbee-mastodon",
-    "0.2.0",
+    "1.4.0",
     "Bitlbee plugin for Mastodon <https://joinmastodon.org/>",
     "Alex Schroeder <alex@gnu.org>",
     "https://alexschroeder.ch/cgit/bitlbee-mastodon/about/"
