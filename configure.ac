@@ -1,5 +1,5 @@
 # Copyright 2016 Artem Savkov <artem.savkov@gmail.com>
-# Copyright 2017 Alex Schroeder <alex@gnu.org>
+# Copyright 2017-2018 Alex Schroeder <alex@gnu.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
