@@ -467,7 +467,13 @@ These are the commands available:
 
 Currently filters are created for all contexts, for whole words, and without an expiration date. Fine grained control over the filters created are planned. Furthermore, for whole words, word edges are weird. For a whole word phrase to match, the beginnin and end of the phrase have to be one of a-z, A-Z, or 0-9, and the character before the phrase and after the phrase must not be one of these. Matching does not care about canonical Unicode form, I'm afraid.
 
-There is currently a known bug: when you're logging in, the filters aren't loaded. You have to use the filter command to load them.
+Example:
+
+<kensanata> filter create twitter.com
+<root> Filter created
+<kensanata> filter
+<root>  1. twitter.com (properties: everywhere, server side, whole word)
+
 %
 ?mnotifications
 Use notifications to show the most recent notifications again. Use more to show more notifications.
