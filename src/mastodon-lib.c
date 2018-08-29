@@ -3965,7 +3965,7 @@ void mastodon_http_filters (struct http_request *req)
 	mastodon_http_filters_load(req);
 
 	if (!md->filters) {
-		mastodon_log(ic, "There are no filters. Create some using 'filter create'.");
+		mastodon_log(ic, "No filters. Use 'filter create'.");
 		return;
 	}
 
