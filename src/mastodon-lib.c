@@ -3973,6 +3973,12 @@ void mastodon_http_filters_load (struct http_request *req)
 		return;
 	}
 
+	if (req->status_code != 200) {
+		mastodon_log(ic, "Filters did not load. This requires Mastodon v2.4.3 or newer. See 'info instance' for more about your instance.");
+		// Don't log off: no ic = NULL!
+		return;
+	}
+
 	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		/* ic would have been freed in imc_logout in this situation */
