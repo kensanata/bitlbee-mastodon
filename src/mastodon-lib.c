@@ -1215,7 +1215,9 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
 		strip_newlines(ms->text);
 	}
 
-	if (md->flags & MASTODON_MODE_CHAT) {
+	/* By default, everything except direct messages goes into a channel. */
+	if (md->flags & MASTODON_MODE_CHAT &&
+		ms->visibility != MV_DIRECT) {
 		mastodon_status_show_chat(ic, ms);
 	} else {
 		mastodon_status_show_msg(ic, ms);
