@@ -181,7 +181,7 @@ static void ms_free(struct mastodon_status *ms)
 	g_free(ms->url);
 	ma_free(ms->account);
 	g_slist_free_full(ms->tags, g_free);
-	g_slist_free_full(ms->mentions, g_free);
+	g_slist_free_full(ms->mentions, (GDestroyNotify) ma_free);
 	g_free(ms);
 }
 
@@ -584,19 +584,12 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		} else if (strcmp("mentions", k) == 0 && v->type == json_array) {
 			GSList *l = NULL;
 			int i;
-			/* skip the current user in mentions since we're only interested in this information for replies where we'll
-			 * never want to mention ourselves */
 			gint64 id = set_getint(&ic->acc->set, "account_id");
 			for (i = 0; i < v->u.array.length; i++) {
-				json_value *mention = v->u.array.values[i];
-				json_value *it;
-				const char *acct;
-				if (mention->type == json_object &&
-					(it = json_o_get(mention, "id")) &&
-					mastodon_json_int64(it) != id &&
-					(acct = json_o_str(mention, "acct"))) {
-					l = g_slist_prepend(l, g_strdup(acct));
-				}
+				struct mastodon_account *ma = mastodon_xt_get_user(v->u.array.values[i]);
+				/* Skip the current user in mentions since we're only interested in this information for replies where
+				 * we'll never want to mention ourselves. */
+				if (ma && ma->id != id) l = g_slist_prepend(l, ma);
 			}
 			ms->mentions = l;
 		} else if (strcmp("sensitive", k) == 0 && v->type == json_boolean) {
@@ -638,15 +631,15 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 			ms->tags = rms->tags; // adopt
 			rms->tags = NULL;
 
-			g_slist_free_full(ms->mentions, g_free);
+			g_slist_free_full(ms->mentions, (GDestroyNotify) ma_free);
 			ms->mentions = rms->mentions; // adopt
 			rms->mentions = NULL;
 
 			/* add original author to mentions of boost if not ourselves */
 			gint64 id = set_getint(&ic->acc->set, "account_id");
 			if (rms->account->id != id) {
-				ms->mentions = g_slist_prepend(ms->mentions, rms->account->acct); // adopt
-				rms->account->acct = NULL;
+				ms->mentions = g_slist_prepend(ms->mentions, rms->account); // adopt
+				rms->account = NULL;
 			}
 
 			ms_free(rms);
@@ -867,7 +860,7 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 
 		md->log[idx].visibility = ms->visibility;
 		g_slist_free_full(md->log[idx].mentions, g_free);
-		md->log[idx].mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) g_strdup, NULL);
+		md->log[idx].mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) ma_copy, NULL);
 
 		g_free(md->log[idx].spoiler_text);
 		md->log[idx].spoiler_text = g_strdup(ms->spoiler_text); // no problem if NULL
@@ -886,8 +879,8 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 				mud->last_time = ms->created_at;
 
 				mud->visibility = ms->visibility;
-				g_slist_free_full(mud->mentions, g_free);
-				mud->mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) g_strdup, NULL);
+				g_slist_free_full(mud->mentions, (GDestroyNotify) ma_free);
+				mud->mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) ma_copy, NULL);
 
 				g_free(mud->spoiler_text);
 				mud->spoiler_text = g_strdup(ms->spoiler_text); // no problem if NULL
@@ -1063,10 +1056,10 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 		for (l = ms->mentions; l; l = g_slist_next(l)) {
 
 			bee_user_t *bu;
-			char *acct = (char *) l->data;
-			if ((bu = bee_user_by_handle(ic->bee, ic, acct))) {
-				/* No adding of buddies at this point? */
-				imcb_buddy_msg(ic, acct, text ? text : ms->text, 0, ms->created_at);
+			struct mastodon_account *ma = (struct mastodon_account *) l->data;
+			if ((bu = bee_user_by_handle(ic->bee, ic, ma->acct))) {
+				mastodon_add_buddy(ic, ma->id, ma->acct, ma->display_name);
+				imcb_buddy_msg(ic, ma->acct, text ? text : ms->text, 0, ms->created_at);
 			}
 		}
 	}
@@ -1986,7 +1979,7 @@ static void mastodon_http_callback(struct http_request *req)
 			g_free(md->last_spoiler_text);
 			md->last_spoiler_text = ms->spoiler_text; // adopt
 			ms->spoiler_text = NULL;
-			g_slist_free_full(md->mentions, g_free);
+			g_slist_free_full(md->mentions, (GDestroyNotify) ma_free);
 			md->mentions = ms->mentions; // adopt
 			ms->mentions = NULL;
 
@@ -2763,24 +2756,25 @@ void mastodon_status_show_url(struct im_connection *ic, guint64 id)
 }
 
 /**
- * Append a string data to a gstring user_data, separated with a space, if necessary. This is to be used with
+ * Append a the acct attribute to a gstring user_data, separated with a space, if necessary. This is to be used with
  * g_list_foreach(). The prefix "@" is added in front of every element.
  */
-static void mastodon_string_append(gchar *data, GString *user_data)
+static void mastodon_account_append(struct mastodon_account *ma, GString *user_data)
 {
 	if (user_data->len > 0) {
 		g_string_append(user_data, " ");
 	}
 	g_string_append(user_data, "@");
-	g_string_append(user_data, data);
+	g_string_append(user_data, ma->acct);
 }
 
 /**
- * Join all the strings in a list, space-separated. Be sure to free the returned GString with g_string_free(). If there
- * is no initial element for the list, use NULL for the second argument. The prefix "@" is added in front of every
- * element. It is added to the initial element, too! This is used to generated a list of accounts to mention in a toot.
+ * Join all the acct attributes of a list of accounts, space-separated. Be sure to free the returned GString with
+ * g_string_free(). If there is no initial element for the list, use NULL for the second argument. The prefix "@" is
+ * added in front of every element. It is added to the initial element, too! This is used to generated a list of
+ * accounts to mention in a toot.
  */
-GString *mastodon_string_join(GSList *l, gchar *init)
+GString *mastodon_account_join(GSList *l, gchar *init)
 {
 	if (!l && !init) return NULL;
 	GString *s = g_string_new(NULL);
@@ -2788,7 +2782,7 @@ GString *mastodon_string_join(GSList *l, gchar *init)
 		g_string_append(s, "@");
 		g_string_append(s, init);
 	}
-	g_slist_foreach(l, (GFunc) mastodon_string_append, s);
+	g_slist_foreach(l, (GFunc) mastodon_account_append, s);
 	return s;
 }
 
@@ -2798,7 +2792,7 @@ GString *mastodon_string_join(GSList *l, gchar *init)
 void mastodon_show_mentions(struct im_connection *ic, GSList *l)
 {
 	if (l) {
-		GString *s = mastodon_string_join(l, NULL);
+		GString *s = mastodon_account_join(l, NULL);
 		mastodon_log(ic, "Mentioned: %s", s->str);
 		g_string_free(s, TRUE);
 	} else {

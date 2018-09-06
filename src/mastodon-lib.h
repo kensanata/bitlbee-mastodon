@@ -109,7 +109,7 @@ mastodon_visibility_t mastodon_parse_visibility(char *value);
 char *mastodon_visibility(mastodon_visibility_t visibility);
 void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, mastodon_visibility_t visibility, char *spoiler_text);
 void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type_t command, guint64 id);
-GString *mastodon_string_join(GSList *l, gchar *init);
+GString *mastodon_account_join(GSList *l, gchar *init);
 void mastodon_show_mentions(struct im_connection *ic, GSList *l);
 void mastodon_status_show_mentions(struct im_connection *ic, guint64 id);
 void mastodon_status_show_url(struct im_connection *ic, guint64 id);

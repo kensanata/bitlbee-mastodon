@@ -629,10 +629,10 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		if (!who) break;
 		if (g_ascii_strcasecmp(who, md->user) == 0) {
 			/* if replying to ourselves, we still want to mention others, if any */
-			m = mastodon_string_join(mentions, NULL);
+			m = mastodon_account_join(mentions, NULL);
 		} else {
 			/* if replying to others, mention them, too */
-			m = mastodon_string_join(mentions, who);
+			m = mastodon_account_join(mentions, who);
 		}
 		if (m) {
 			text = g_strdup_printf("%s %s", m->str, message);
@@ -665,7 +665,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 						// this is a reply
 						in_reply_to = mud->last_id;
 						// We're always replying to at least one person. bu->handle is fully qualified unlike who
-						m = mastodon_string_join(mud->mentions, bu->handle);
+						m = mastodon_account_join(mud->mentions, bu->handle);
 						visibility = mud->visibility;
 						spoiler_text = mud->spoiler_text;
 					} else {
@@ -690,7 +690,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 					visibility = md->last_visibility;
 					spoiler_text = g_strdup(md->last_spoiler_text);
 					if (md->mentions) {
-						m = mastodon_string_join(md->mentions, NULL);
+						m = mastodon_account_join(md->mentions, NULL);
 						mastodon_log(ic, "Mentions %s", m->str);
 						text = g_strdup_printf("%s %s", m->str, message + wlen + 1);
 						g_string_free(m, TRUE);
