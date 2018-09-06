@@ -1025,32 +1025,53 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 {
 	struct mastodon_data *md = ic->proto_data;
 	char from[MAX_STRING] = "";
-	char *prefix = NULL, *text = NULL;
+	char *text = NULL;
 	gint64 id = set_getint(&ic->acc->set, "account_id");
 	gboolean me = (ms->account->id == id);
 	char *name = set_getstr(&ic->acc->set, "name");
 
 	if (md->flags & MASTODON_MODE_ONE) {
+
+		char *prefix = g_strdup_printf("\002<\002%s\002>\002 ", ms->account->acct);
+		text = mastodon_msg_add_id(ic, ms, prefix); /* may return NULL */
+		g_free(prefix);
+
 		g_strlcpy(from, name, sizeof(from));
-	}
+		imcb_buddy_msg(ic, from, text ? text : ms->text, 0, ms->created_at);
 
-	if (md->flags & MASTODON_MODE_ONE) {
-		prefix = g_strdup_printf("\002<\002%s\002>\002 ",
-		                         ms->account->acct);
 	} else if (!me) {
+
 		mastodon_add_buddy(ic, ms->account->id, ms->account->acct, ms->account->display_name);
+		text = mastodon_msg_add_id(ic, ms, ""); /* may return NULL */
+		imcb_buddy_msg(ic, *from ? from : ms->account->acct, text ? text : ms->text, 0, ms->created_at);
+
+	} else if (!ms->mentions) {
+
+		text = mastodon_msg_add_id(ic, ms, "You, direct, but without mentioning anybody: "); /* may return NULL */
+		mastodon_log(ic, text ? text : ms->text);
+
 	} else {
-		prefix = g_strdup("You: ");
+
+		text = mastodon_msg_add_id(ic, ms, "You, direct: ");
+
+		/* At this point we have to cheat: if this is the echo of a message we're sending, we still want this message to
+		 * show up in the query buffer where we're chatting with somebody. So even though it is "from us" we're going to
+		 * fake that it is "from the recipient". And worse: we want to do this for all the buddies if we're chatting
+		 * directly with multiple people. */
+
+		GSList *l;
+		for (l = ms->mentions; l; l = g_slist_next(l)) {
+
+			bee_user_t *bu;
+			char *acct = (char *) l->data;
+			if ((bu = bee_user_by_handle(ic->bee, ic, acct))) {
+				/* No adding of buddies at this point? */
+				imcb_buddy_msg(ic, acct, text ? text : ms->text, 0, ms->created_at);
+			}
+		}
 	}
-
-	text = mastodon_msg_add_id(ic, ms, prefix ? prefix : "");
-
-	imcb_buddy_msg(ic,
-	               *from ? from : ms->account->acct,
-	               text ? text : ms->text, 0, ms->created_at);
 
 	g_free(text);
-	g_free(prefix);
 }
 
 struct mastodon_status *mastodon_notification_to_status(struct mastodon_notification *notification)
