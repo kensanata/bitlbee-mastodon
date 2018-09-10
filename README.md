@@ -59,7 +59,23 @@ Build dependencies
   If you haven't built Bitlbee yourself you will need to install the
   dev package, usually `bitlbee-dev` or `bitlbee-devel`. If Bitlbee
   was built from source don't forget to do `make install-dev`.
-
+  
+  To NetBSD users: your Bitlbee doesn't include the devel files.
+  One way to fix this is to build Bitlbee via `pkgsrc`. You'll need
+  to add to the `chat/bitlbee` pkgsrc `Makefile`, in the `post-build`
+  hook, this line: 
+ 
+  ```
+  cd ${WRKSRC} && ${GMAKE} DESTDIR=${DESTDIR} install-dev
+  ```
+  
+  Don't forget to regenerate your `PLIST` (`plugindir` is 
+  `/usr/pkg/lib/bitlbee`) with:
+  
+  ```
+  make print-PLIST > PLIST
+  ```
+  
 - `glib2` and headers => 2.32
 
   The library itself is usually installed as a dependency of Bitlbee
@@ -70,6 +86,10 @@ Build dependencies
 
   A bit of an overkill, but it works. If you don't have this package,
   try looking for `autoconf` and `libtool`.
+  
+  \*BSD users should install `autoconf`, `automake` and `libtool`, 
+  preferably the latest version available. FreeBSD will also need 
+  `pkgconfig` on top of that.
 
 
 Building and Installing
