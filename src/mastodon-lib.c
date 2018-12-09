@@ -4073,10 +4073,13 @@ void mastodon_filters(struct im_connection *ic)
 void mastodon_http_get_filters (struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct mastodon_data *md = ic->proto_data;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
 
 	mastodon_http_filters_load(req);
 
+	struct mastodon_data *md = ic->proto_data;
 	md->flags |= MASTODON_GOT_FILTERS;
 	mastodon_flush_timeline(ic);
 }
