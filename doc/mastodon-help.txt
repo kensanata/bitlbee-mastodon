@@ -69,9 +69,9 @@ Use help to learn more about these options.
 
 Without a name set, Mastodon accounts will use host URL and acccount name to create a channel name. This results in a long channel name and if you prefer a shorter channel name, use this setting (when the account is offline) to change it.
 
-<kensanata> account mastodon offline
+<kensanata> account mastodon off
 <kensanata> account mastodon set name masto
-<kensanata> account mastodon online
+<kensanata> account mastodon on
 <kensanata> save
 %
 ?set hide_sensitive
