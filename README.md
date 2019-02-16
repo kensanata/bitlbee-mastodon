@@ -95,14 +95,19 @@ Build dependencies
 Building and Installing
 -----------------------
 
-If building from git you need to generate the autotools configuration
-script and related files by executing the following command:
+Check your distribution:
+
+- FreeBSD: `irc/bitlbee-mastodon`
+
+Alternatively, build it from source. You need to generate the
+autotools configuration script and related files by executing the
+following command:
 
 ```
 ./autogen.sh
 ```
 
-After that (or when building from a tarball) you can build as usual:
+After that, you can build as usual:
 
 ```
 ./configure
