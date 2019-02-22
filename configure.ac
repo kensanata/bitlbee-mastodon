@@ -1,5 +1,5 @@
 # Copyright 2016 Artem Savkov <artem.savkov@gmail.com>
-# Copyright 2017-2018 Alex Schroeder <alex@gnu.org>
+# Copyright 2017-2019 Alex Schroeder <alex@gnu.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 
 AC_INIT(
   [bitlbee-mastodon],
-  [1.4.0],
+  [1.4.1],
   [https://github.com/kensanata/bitlbee-mastodon/issues],
   [bitlbee-mastodon],
   [https://alexschroeder.ch/cgit/bitlbee-mastodon/about/],
