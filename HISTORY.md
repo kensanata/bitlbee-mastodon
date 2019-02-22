@@ -1,5 +1,12 @@
 # The History of this Plugin
 
+New features for 1.4.1:
+
+- small improvements to command parsing and feedback
+- better handling of multiple mentions
+- better handling of direct messages
+- possible fix to a crash related to filters
+
 New features for 1.4.0:
 
 - new `filter` command
