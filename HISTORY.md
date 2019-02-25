@@ -1,5 +1,9 @@
 # The History of this Plugin
 
+New features for 1.4.2:
+
+- 1.4.1 got mistagged, so this tag makes sure it all syncs up again
+
 New features for 1.4.1:
 
 - small improvements to command parsing and feedback
