@@ -46,9 +46,7 @@ protocols using the `plugins` command in your `&bitlbee` control
 channel.
 
 If this worked, create your account using the `account` command in
-your `&bitlbee` control channel. For more help, see the
-[help page](https://alexschroeder.ch/cgit/bitlbee-mastodon/tree/doc/HELP.md#connect)
-on connecting to an instance.
+your `&bitlbee` control channel.
 
 In this example, we'll sign in as
 **@kensanata@mastodon.weaponvsac.space**. This assumes an existing
