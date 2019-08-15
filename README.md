@@ -41,11 +41,64 @@ GPL 2.0 or any later version.
 Usage
 -----
 
-Please refer to the Bitlbee help system:
+First, make sure the installation worked by checking the installed
+protocols using the `plugins` command in your `&bitlbee` control
+channel.
 
-```
-> help mastodon
-```
+If this worked, create your account using the `account` command in
+your `&bitlbee` control channel. For more help, see the
+[help page](https://alexschroeder.ch/cgit/bitlbee-mastodon/tree/doc/HELP.md#connect)
+on connecting to an instance.
+
+In this example, we'll sign in as
+**@kensanata@mastodon.weaponvsac.space**. This assumes an existing
+account on an instance! Replace username and Mastodon server when
+trying it.
+
+In your **&bitlbee** channel, add a new account, change it's
+**base_url** to point at your instance, and switch it on:
+
+> **&lt;kensanata&gt;** account add mastodon @kensanata  
+> **&lt;root&gt;** Account successfully added with tag mastodon  
+> **&lt;kensanata&gt;** account mastodon set base_url https://mastodon.weaponvsac.space/api/v1  
+> **&lt;root&gt;** base_url = `https://mastodon.weaponvsac.space/api/v1'  
+> **&lt;kensanata&gt;** account mastodon on  
+> **&lt;root&gt;** mastodon - Logging in: Login  
+> **&lt;root&gt;** mastodon - Logging in: Parsing application registration response  
+> **&lt;root&gt;** mastodon - Logging in: Starting OAuth authentication  
+
+At this point, you'll get contacted by the user **mastodon_oauth**
+with a big URL that you need to visit using a browser. Visit the URL
+and authenticate the client. You'll get back another very long string.
+Copy and paste this string:
+
+> **&lt;mastodon_oauth&gt;** Open this URL in your browser to authenticate: https://.......  
+> **&lt;mastodon_oauth&gt;** Respond to this message with the returned authorization token.  
+> **&lt;kensanata&gt;** \*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*  
+
+Once you do that, your login should complete in the **&bitlbee** channel:
+
+> **&lt;root&gt;** mastodon2 - Logging in: Requesting OAuth access token  
+> **&lt;root&gt;** mastodon2 - Logging in: Connecting  
+> **&lt;root&gt;** mastodon2 - Logging in: Verifying credentials  
+> **&lt;root&gt;** mastodon2 - Logging in: Getting home timeline  
+> **&lt;root&gt;** mastodon2 - Logging in: Logged in  
+
+You should now have a channel called
+**#mastodon.weaponsvsac.space@localhost** where all the status updates
+and notifications get shown. We'll call this your **account channel**.
+See **help set name** to change it's name.
+
+Mastodon gives BitlBee a permanent authentication token, which is saved in your configuration.
+
+You should probably save this configuration.
+
+> **&lt;kensanata&gt;** save  
+> **&lt;root&gt;** Configuration saved  
+
+Adding the account and switching it on loads the Bitlbee Mastodon help
+file into the system, allowing you to use `help mastodon` in your
+`&bitlbee` control channel.
 
 Alternatively, a snapshot of the entries added to the help system by
 this plugin are available on the
