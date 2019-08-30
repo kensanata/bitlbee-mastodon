@@ -22,6 +22,7 @@ For questions, ping **kensanata** on `irc.oftc.net/#bitlbee`.
 - [Usage](#usage)
 - [Build dependencies](#build-dependencies)
 - [Building and Installing](#building-and-installing)
+- [Bugs](#bugs)
 - [Debugging](#debugging)
 
 <!-- markdown-toc end -->
