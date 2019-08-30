@@ -179,6 +179,18 @@ of `/usr/share/bitlbee` (`datadir`). As you can tell from
 this situation, try `./configure --prefix=/usr` and build and install
 again.
 
+Bugs
+----
+
+[Crashing while running Twitter](https://alexschroeder.ch/software/Crashing_while_running_Twitter):
+There seems to be some sort of interaction between the Twitter code
+and the Mastodon plugin. If you get connected to Mastodon and then
+Bitlbee crashes, and you have a Twitter account set up, try this:
+
+1. take the Twitter account offline
+2. take the Mastodon account online
+3. take the Twitter account online
+
 Debugging
 ---------
 
