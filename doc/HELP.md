@@ -9,6 +9,7 @@ Mastodon is a free, open-source social network server. A decentralized solution 
 * *[read](#read)* - Reading your timeline
 * *[post](#post)* - Posting a new status
 * *[undo](#undo)* - Undo and redo
+* *[dm](#dm)* - Sending direct messages
 * *[context](#context)* - Showing a status in its context
 * *[reply](#reply)* - Replying to a status
 * *[delete](#delete)* - Deleting a status
@@ -273,6 +274,15 @@ Use **history undo** if you are interested in seeing the commands that will be u
 Use **fav &lt;id|nick&gt;** to favour a status or the last status by a nick. Synonyms: **favourite**, **favorite**, **like**.
 
 Use **unfav &lt;id|nick&gt;** to unfavour a status or the last status by a nick. Synonyms: **unfavourite**, **unfavorite**, **unlike**, **dislike**.
+
+## dm
+There are two ways to send a direct message to someone (also known as a DM).
+
+If you are following them, then there exists a handle for them in your IRC client and you can simply **/msg &lt;nick&gt;**
+
+To DM anyone regardless of whether you follow them, use **visibility direct** and then write a post that mentions their long @nick@server account name.
+
+See **help set visibility** for more.
 
 ## context
 Use **context &lt;id|nick&gt;** to show some context for a status or the last status by a nick. This will display the ancestors and descendants of a status.
