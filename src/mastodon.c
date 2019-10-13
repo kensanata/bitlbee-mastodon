@@ -5,7 +5,7 @@
 *                                                                           *
 *  Copyright 2009-2010 Geert Mulders <g.c.w.m.mulders@gmail.com>            *
 *  Copyright 2010-2013 Wilmer van der Gaast <wilmer@gaast.net>              *
-*  Copyright 2017-2018 Alex Schroeder <alex@gnu.org>                        *
+*  Copyright 2017-2019 Alex Schroeder <alex@gnu.org>                        *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -734,14 +734,14 @@ finish:
 static void mastodon_handle_command(struct im_connection *ic, char *message, mastodon_undo_t undo_type);
 
 /**
- * Send a direct message. If this buddy is the magic mastodon oauth
- * handle, then treat the message as the refresh token. If this buddy
- * is me, then treat the message as a command.
+ * Send a direct message. If this buddy is the magic mastodon oauth handle, then treat the message as the refresh token.
+ * If this buddy is me, then treat the message as a command. Everything else is a message to a buddy in a query.
  */
 static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message, int away)
 {
 	struct mastodon_data *md = ic->proto_data;
 
+	/* OAuth message to "mastodon_oauth" */
 	if (g_ascii_strcasecmp(who, MASTODON_OAUTH_HANDLE) == 0 &&
 	    !(md->flags & OPT_LOGGED_IN)) {
 
@@ -755,9 +755,20 @@ static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message
 	}
 
 	if (g_ascii_strcasecmp(who, md->name) == 0) {
+		/* Message to ourselves */
 		mastodon_handle_command(ic, message, MASTODON_NEW);
 	} else {
-		mastodon_post_message(ic, message, 0, who, MASTODON_REPLY, NULL, MV_DIRECT, NULL);
+		/* Determine who and to what post id we are replying to */
+		guint64 in_reply_to = 0;
+		bee_user_t *bu;
+		if ((bu = bee_user_by_handle(ic->bee, ic, who))) {
+			struct mastodon_user_data *mud = bu->data;
+			if (time(NULL) < mud->last_direct_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
+				/* this is a reply */
+				in_reply_to = mud->last_direct_id;
+			}
+		}
+		mastodon_post_message(ic, message, in_reply_to, who, MASTODON_REPLY, NULL, MV_DIRECT, NULL);
 	}
 	return 0;
 }

@@ -5,7 +5,7 @@
 *                                                                           *
 *  Copyright 2009-2010 Geert Mulders <g.c.w.m.mulders@gmail.com>            *
 *  Copyright 2010-2013 Wilmer van der Gaast <wilmer@gaast.net>              *
-*  Copyright 2017-2018 Alex Schroeder <alex@gnu.org>                        *
+*  Copyright 2017-2019 Alex Schroeder <alex@gnu.org>                        *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -875,10 +875,21 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 			struct mastodon_user_data *mud = bu->data;
 
 			if (ms->id > mud->last_id) {
+				mud->visibility = ms->visibility;
+				if (ms->visibility == MV_DIRECT) {
+					/* We need to keep the timestamp for direct communications in addition to the regular timestamp so
+					 * that if somebody sends us a direct message (which shows up in a query buffer) and then posts a
+					 * public message (which shows up in the regular channel) and we reply in the query buffer then we
+					 * want our in_reply_to to refer to the older direct message, no the newer public message (see
+					 * mastodon_buddy_msg which calls mastodon_post_message using MASTODON_REPLY). At the same time, if
+					 * somebody sends a public message first, followed by a direct message, and re reply in the regular
+					 * channel (!) then we want our reply to still work (mastodon_handle_command calls
+					 * mastodon_post_message with MASTODON_MAYBE_REPLY). */
+					mud->last_direct_id = ms->id;
+					mud->last_direct_time = ms->created_at;
+				}
 				mud->last_id = ms->id;
 				mud->last_time = ms->created_at;
-
-				mud->visibility = ms->visibility;
 				g_slist_free_full(mud->mentions, (GDestroyNotify) ma_free);
 				mud->mentions = g_slist_copy_deep(ms->mentions, (GCopyFunc) ma_copy, NULL);
 
