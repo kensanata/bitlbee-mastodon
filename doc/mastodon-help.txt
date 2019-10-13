@@ -1,32 +1,33 @@
 ?mastodon
 Mastodon is a free, open-source social network server. A decentralized solution to commercial platforms, it avoids the risks of a single company monopolizing your communication. Anyone can run Mastodon and participate in the social network seamlessly.
 
- help mnews - Backwards incompatible changes
- help mregister - Registering an account
- help mconnect - Connecting to an instance
- help mread - Reading your timeline
- help mpost - Posting a new status
- help mundo - Undo and redo
- help mcontext - Showing a status in its context
- help mreply - Replying to a status
- help mdelete - Deleting a status
- help mfavourite - Favouring a status
- help mfollow - Following an account
- help mblock - Blocking an account
- help mmute - Muting an account
- help mboost - Boosting a status
- help mmore - Getting more information about things
- help msearch - Searching for accounts and hashtags
- help mspam - Reporting a status
- help mcontrol - Commands in the control channel
- help mhashtag - Showing and following a hashtag
- help mpublic - Showing and following the local or federated timeline
- help mlists - Managing lists
- help mfilters - Managing filters
- help mnotifications - Showing your notifications
- help mset - Settings affecting Mastodon accounts
+ help mastodon news - Backwards incompatible changes
+ help mastodon register - Registering an account
+ help mastodon connect - Connecting to an instance
+ help mastodon read - Reading your timeline
+ help mastodon post - Posting a new status
+ help mastodon undo - Undo and redo
+ help mastodon dm - Sending direct messages
+ help mastodon context - Showing a status in its context
+ help mastodon reply - Replying to a status
+ help mastodon delete - Deleting a status
+ help mastodon favourite - Favouring a status
+ help mastodon follow - Following an account
+ help mastodon block - Blocking an account
+ help mastodon mute - Muting an account
+ help mastodon boost - Boosting a status
+ help mastodon more - Getting more information about things
+ help mastodon search - Searching for accounts and hashtags
+ help mastodon spam - Reporting a status
+ help mastodon control - Commands in the control channel
+ help mastodon hashtag - Showing and following a hashtag
+ help mastodon public - Showing and following the local or federated timeline
+ help mastodon lists - Managing lists
+ help mastodon filters - Managing filters
+ help mastodon notifications - Showing your notifications
+ help mastodon set - Settings affecting Mastodon accounts
 %
-?mnews
+?mastodon news
 Use plugins in the control channel (&bitlbee) to learn which version of the plugin you have.
 
 Incompatible change in 1.4.0: If you have subscribed to a hashtag, you need to change your channel settings and prepend the hash. Do this from the control channel (&bitlbee). Let's assume you have a channel called #hashtag. It's room setting should be #hashtag. If it's lacking the initial hash:
@@ -38,10 +39,10 @@ Incompatible change in 1.4.0: If you have subscribed to a hashtag, you need to
 
 Don't forget to save your settings.
 %
-?mregister
+?mastodon register
 You need to register your Mastodon account on an instance. See https://instances.social/ if you need help picking an instance. It's a bit like picking a mail server and signing up. Sadly, there is currently no way to do this from IRC. Your need to use a web browser to do it. Once you have the account, see help account add mastodon for setting up your account.
 %
-?mset
+?mastodon set
 These settings will affect Mastodon accounts:
 
  set auto_reply_timeout - replies to most recent messages in the last 3h
@@ -118,7 +119,7 @@ This is the text to flag sensitive content with. You can change this setting in 
 Scope: account
 Default: "public"
 
-This is the default visibility of your toots. There are three valid options: "public" (everybody can see your toots), "unlisted" (everybody can see your toots but they are not found on the public timelines), and "private" (only followers can see them). For more information see https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/User-guide.md#toot-privacy. This is used whenever you make a new post. You can override this visibility for new posts in the control channel (&bitlbee). See help mpost for more.
+This is the default visibility of your toots. There are three valid options: "public" (everybody can see your toots), "unlisted" (everybody can see your toots but they are not found on the public timelines), and "private" (only followers can see them). For more information see https://github.com/tootsuite/documentation/blob/master/Using-Mastodon/User-guide.md#toot-privacy. This is used whenever you make a new post. You can override this visibility for new posts in the control channel (&bitlbee). See help mastodon post for more.
 
 <kensanata> account mastodon set visibility private
 <kensanata> save
@@ -186,9 +187,9 @@ To send toots yourself, just write in the groupchat channel.
 
 Since Mastodon requires OAuth authentication, you should not enter your Mastodon password into BitlBee. The first time you log in, BitlBee will start OAuth authentication. (See help set oauth.)
 
-In order to connect to the correct instances, you must most probably change the base_url setting. See help mconnect for an example.
+In order to connect to the correct instances, you must most probably change the base_url setting. See help mastodon connect for an example.
 %
-?mconnect
+?mastodon connect
 In this section, we'll sign in as @kensanata@mastodon.weaponvsac.space. This section assumes an existing account on an instance! Replace username and Mastodon server when trying it.
 
 In your &bitlbee channel, add a new account, change it's base_url to point at your instance, and switch it on:
@@ -202,9 +203,9 @@ In your &bitlbee channel, add a new account, change it's base_url to point a
 <root> mastodon - Logging in: Parsing application registration response
 <root> mastodon - Logging in: Starting OAuth authentication
 
-At this point, you'll get contacted by the user mastodon_oauth with a big URL that you need to visit using a browser. See help mconnect2 for the OAuth authentication.
+At this point, you'll get contacted by the user mastodon_oauth with a big URL that you need to visit using a browser. See help mastodon connect2 for the OAuth authentication.
 %
-?mconnect2
+?mastodon connect2
 Visit the URL the mastodon_oauth user gave you and authenticate the client. You'll get back another very long string. Copy and paste this string:
 
 <mastodon_oauth> Open this URL in your browser to authenticate: https://.......
@@ -228,12 +229,12 @@ You should probably save this configuration.
 <kensanata> save
 <root> Configuration saved
 %
-?mread
+?mastodon read
 The default mode setting is chat. This means that each Mastodon account you add results in a new channel in your IRC client.
 
 Use help set mode in your Bitlbee control channel (&bitlbee) to read up on different modes.
 %
-?mpost
+?mastodon post
 The default commands setting is true. This means that anything you type is a toot unless it looks like command, in which case it is handled as such. In addition to that, you can use the post <message> command. If you set the commands setting to strict, using the post command is mandatory.
 
 Use help set commands in your Bitlbee control channel (&bitlbee) to read up on the various commands.
@@ -260,57 +261,66 @@ By default the Mastodon server limits your toots to 500 characters. Bitlbee trie
 
 Note also that Bitlbee itself does word-wrapping to limit messages to 425 characters. That is why longer messages may look like extra newlines have been introduced but if you check the status on the web, you'll see that everything is OK.
 %
-?mundo
+?mastodon undo
 Use undo and redo to undo and redo recent commands. Bitlbee will remember your last 10 Mastodon commands and allows you to undo and redo them.
 
 Use history to see the list of commands you can undo. There is a pointer (>) showing the current position.
 
 Use history undo if you are interested in seeing the commands that will be used to undo what you just did.
 %
-?mfavourite
+?mastodon favourite
 Use fav <id|nick> to favour a status or the last status by a nick. Synonyms: favourite, favorite, like.
 
 Use unfav <id|nick> to unfavour a status or the last status by a nick. Synonyms: unfavourite, unfavorite, unlike, dislike.
 %
-?mcontext
+?mastodon dm
+There are two ways to send a direct message to someone (also known as a DM).
+
+If you are following them, then there exists a handle for them in your IRC client and you can simply /msg <nick>
+
+To DM anyone regardless of whether you follow them, use visibility direct and then write a post that mentions their long @nick@server account name.
+
+See help set visibility for more.
+%
+?mastodon context
 Use context <id|nick> to show some context for a status or the last status by a nick. This will display the ancestors and descendants of a status.
 
 Use timeline <nick> to show the most recent messages by a nick. Use more to show more statuses from the same command.
 
 Use timeline @<account> to show the most recent messages by an account that isn't a nick in your channel. Use more to show more statuses from the same command.
 %
-?mreply
+?mastodon reply
 If you use the default IRC conventions of starting a message with a nickname and a colon (:) or a comma (,), then your message will be treated as a reply to that nick's last message. As is custom, the recipient and all the people they mentioned in their toot get mentioned in your reply. This only works if that nick's last message was sent within the last 3h. For more information about this time window use help set auto_reply_timeout in your Bitlbee control channel (&bitlbee).
 
 You can also reply to an earlier message by referring to its id using the reply <id> <message> command. Again, the recipient and all the people they mentioned in their toot get mentioned in your reply.
 
 If you set the commands setting to strict, using the reply command is mandatory.
 
-When replying to a post, your reply uses the same visibility as the original toot unless your default visibility is more restricted: direct > private > unlisted > public. See help set visibility for more. You can set a different visibility using the visibility command. See help mpost for more.
+When replying to a post, your reply uses the same visibility as the original toot unless your default visibility is more restricted: direct > private > unlisted > public. See help set visibility for more. You can set a different visibility using the visibility command. See help mastodon post for more.
 
-When replying to a post, your reply uses the same content warning unless you have set up a different one via cw. See help mpost for more.
+When replying to a post, your reply uses the same content warning unless you have set up a different one via cw. See help mastodon post for more.
 %
-?mdelete
+?mastodon delete
 Use del <id> to delete a status or your last status. Synonym: delete.
 %
-?mfavourite
+?mastodon favourite
 Use fav <id|nick> to favour a status or the last status by a nick. Synonyms: favourite, favorite, like.
 
 Use unfav <id|nick> to unfavour a status or the last status by a nick. Synonyms: unfavourite, unfavorite, unlike, dislike.
 %
-?mfollow
+?mastodon follow
 Use follow <nick|account> to follow somebody. This determines the nicks in your channel. Verify the list using /names.
 
 Usually you'll be providing a local or remote account to follow. In the background, Bitlbee will run a search for the account you provided and follow the first match. Sometimes there will be nicks in the channel which you are not following, e.g. a nick is automatically added to the channel when a status of theirs mentioning you is shown.
 
 Use unfollow <nick> to unfollow a nick. Synonyms: allow.
 %
-?mblock
+?mastodon block
 Use block <nick> to block a nick on the server. This is independent of your IRC client's /ignore command, if available.
 
 Use unblock <nick> to unblock a nick.
 %
-?mmute
+?mastodon mute
 Use mute user <nick> to mute a nick on the server.
 
 Use unmute user <nick> to unmute a nick.
@@ -319,12 +329,12 @@ Use mute <id|nick> to mute the conversation based on a status or the last stat
 
 Use unmute <id|nick> to unmute the conversation based on a status or the last status by a nick.
 %
-?mboost
+?mastodon boost
 Use boost <id|nick> to boost a status or the last status by a nick.
 
 Use unboost <id|nick> to unboost a status or the last status by a nick.
 %
-?mmore
+?mastodon more
 Use url <id|nick> to get the URL to a status or the last status by a nick.
 
 Use whois <id|nick> to show handle and full name by a nick, or of all the nicks mentioned in a status.
@@ -360,7 +370,7 @@ Use api <get|put|post|delete> <endpoint> <optional args> to call the API direc
 <root> }
 <kensanata> api post /lists/9/accounts account_ids[] 13250
 %
-?msearch
+?mastodon search
 Mastodon allows you to search for accounts, hashtags, and statuses you've written, boosted, favourited or were mentioned in, if your instance has this feature enabled.
 
 Use search <what> to search for all these things.
@@ -369,19 +379,19 @@ You can also search for a specific status by searching the URL of said status. T
 
 If you want to show the statuses for a specific account or a hashtag, use timeline <nick|#hashtag>.
 
-If you want to subscribe to a particular hashtag, see help mhashtag for more.
+If you want to subscribe to a particular hashtag, see help mastodon hashtag for more.
 %
-?mspam
+?mastodon spam
 Use report <id|nick> <comment> to report a status or the last status by a nick. Synonyms:spam.
 
 Note that the comment is mandatory. Explain why the status is being reported. The administrator of your instance will see this report and decide what to do about it, if anything.
 %
-?mcontrol
+?mastodon control
 As we said at the beginning, the default mode setting is chat. This means that each Mastodon account you add will result in a new channel in your IRC client. All the commands mentioned above are what you type in this "instance channel."
 
 There are some standard root commands that only work in the control channel, &bitlbee.
 %
-?mhashtag
+?mastodon hashtag
 Use timeline #<hashtag> to show the most recent messages for a hashtag. Use more to show more statuses from the same command.
 
 If you want to follow a hashtag, you need to use the control channel, &bitlbee.
@@ -407,7 +417,7 @@ If you try to subsribe to the same hashtag on a different instance, you'll run i
 <kensanata> channel #hashtag2 set auto_join true
 <kensanata> /join #hashtag2
 %
-?mpublic
+?mastodon public
 Use timeline local to show the most recent messages for the local timeline (these are statuses from accounts on your instance). Use timeline federated to show the most recent messages for the federated timeline (these are statuses from the local accounts and anybody they are following). Use more to show more statuses from the same command.
 
 If you want to follow a hashtag, or the local, or the feredated timeline, you need to use the control channel, &bitlbee. The following assumes that your account is called mastodon. The chat add command takes the parameters account, timeline, and channel name. In the example we're giving the channel a similar name. You can name the channel whatever you want. The important part is that the channel topic must be the name of the timeline it is subscribing to.
@@ -426,7 +436,7 @@ Don't forget to save your config.
 
 Note that where as you can still issue commands in these channels, the output is going to appear in the original account channel.
 %
-?mlists
+?mastodon lists
 You can make lists of the people you follow. To read the latest messages of people in a list, use timeline <title>. If you then create a separate channel for a list, you'll see only statuses of people in that list.
 
 These are the commands available:
@@ -457,7 +467,7 @@ If you want to follow a list, you need to use the control channel, &bitlbee. T
 
 Don't forget to save your config.
 %
-?mfilters
+?mastodon filters
 You can create filters which remove toots from the output.
 
 These are the commands available:
@@ -476,7 +486,7 @@ Example:
 
 Differences from the Mastodon Web UI: case is significant; toots are filtered even if you look at an account timeline or run a search.
 %
-?mnotifications
+?mastodon notifications
 Use notifications to show the most recent notifications again. Use more to show more notifications.
 
 Note that there are settigns to hide notifications of a particular kind. Once you do that, the notifications and more commands may show less output, or none at all, as the display of some notifications is suppressed. See help set hide_boosts, help set hide_favourites, help set hide_follows, and help set hide_mentions.
