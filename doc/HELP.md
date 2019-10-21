@@ -493,3 +493,12 @@ Use **notifications** to show the most recent notifications again. Use **more** 
 
 Note that there are settigns to hide notifications of a particular kind. Once you do that, the **notifications** and **more** commands may show less output, or none at all, as the display of some notifications is suppressed. See **help set hide_boosts**, **help set hide_favourites**, **help set hide_follows**, and **help set hide_mentions**.
 
+## api
+You can send stuff to the Mastodon API yourself, too. Use **api** to do this.
+
+Example:
+
+> **&lt;kensanata&gt;** 23:19 &lt;kensanata&gt; api post /lists?title=test  
+> **&lt;root&gt;** id: 635  
+> **&lt;root&gt;** title: test  
+

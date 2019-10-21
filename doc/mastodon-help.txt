@@ -491,3 +491,12 @@ Use notifications to show the most recent notifications again. Use more to s
 
 Note that there are settigns to hide notifications of a particular kind. Once you do that, the notifications and more commands may show less output, or none at all, as the display of some notifications is suppressed. See help set hide_boosts, help set hide_favourites, help set hide_follows, and help set hide_mentions.
 %
+?mastodon api
+You can send stuff to the Mastodon API yourself, too. Use api to do this.
+
+Example:
+
+<kensanata> 23:19 <kensanata> api post /lists?title=test
+<root> id: 635
+<root> title: test
+%
