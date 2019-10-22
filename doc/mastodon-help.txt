@@ -196,8 +196,8 @@ In your &bitlbee channel, add a new account, change it's base_url to point a
 
 <kensanata> account add mastodon @kensanata
 <root> Account successfully added with tag mastodon
-<kensanata> account mastodon set base_url https://mastodon.weaponvsac.space/api/v1
-<root> base_url = `https://mastodon.weaponvsac.space/api/v1'
+<kensanata> account mastodon set base_url https://mastodon.weaponvsac.space
+<root> base_url = `https://mastodon.weaponvsac.space
 <kensanata> account mastodon on
 <root> mastodon - Logging in: Login
 <root> mastodon - Logging in: Parsing application registration response

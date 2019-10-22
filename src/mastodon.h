@@ -162,7 +162,6 @@ struct mastodon_data {
 	gboolean url_ssl;
 	int url_port;
 	char *url_host;
-	char *url_path;
 
 	char *name; /* Used to generate contact + channel name. */
 

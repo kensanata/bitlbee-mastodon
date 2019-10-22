@@ -337,9 +337,6 @@ static void mastodon_connect(struct im_connection *ic)
 	md->url_ssl = url.proto == PROTO_HTTPS; // always
 	md->url_port = url.port;
 	md->url_host = g_strdup(url.host);
-	if (strcmp(url.file, "/") != 0) {
-		md->url_path = g_strdup(url.file);
-	}
 
 	mastodon_set_name(ic);
 	imcb_add_buddy(ic, md->name, NULL);
@@ -428,11 +425,6 @@ static void mastodon_login(account_t * acc)
 	md->url_ssl = 1;
 	md->url_port = url.port;
 	md->url_host = g_strdup(url.host);
-	if (strcmp(url.file, "/") != 0) {
-		md->url_path = g_strdup(url.file);
-	} else {
-		md->url_path = g_strdup("");
-	}
  	mastodon_set_name(ic);
 
 	GSList *p_in = NULL;
@@ -515,7 +507,6 @@ static void mastodon_logout(struct im_connection *ic)
 		g_free(md->name); md->name = NULL;
 		g_free(md->next_url); md->next_url = NULL;
 		g_free(md->url_host); md->url_host = NULL;
-		g_free(md->url_path); md->url_path = NULL;
 		g_free(md);
 		ic->proto_data = NULL;
 	}

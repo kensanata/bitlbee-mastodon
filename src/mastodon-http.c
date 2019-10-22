@@ -110,13 +110,12 @@ struct http_request *mastodon_http(struct im_connection *ic, char *url_string, h
 
 	// Make the request.
 	GString *request = g_string_new("");
-	g_string_printf(request, "%s %s%s%s%s HTTP/1.1\r\n"
+	g_string_printf(request, "%s %s%s%s HTTP/1.1\r\n"
 	                "Host: %s\r\n"
 	                "User-Agent: BitlBee " BITLBEE_VERSION "\r\n"
 			"Authorization: Bearer %s\r\n",
 	                request_method,
-	                base_url ? base_url->file : md->url_path,
-	                base_url ? "" : url_string,
+	                base_url ? base_url->file : url_string,
 	                method == HTTP_GET && url_arguments[0] ? "?" : "",
 			method == HTTP_GET && url_arguments[0] ? url_arguments : "",
 	                base_url ? base_url->host : md->url_host,
