@@ -59,8 +59,8 @@ In your **&bitlbee** channel, add a new account, change it's
 
 > **&lt;kensanata&gt;** account add mastodon @kensanata  
 > **&lt;root&gt;** Account successfully added with tag mastodon  
-> **&lt;kensanata&gt;** account mastodon set base_url https://mastodon.weaponvsac.space/api/v1  
-> **&lt;root&gt;** base_url = `https://mastodon.weaponvsac.space/api/v1'  
+> **&lt;kensanata&gt;** account mastodon set base_url https://mastodon.weaponvsac.space  
+> **&lt;root&gt;** base_url = `https://mastodon.weaponvsac.space'  
 > **&lt;kensanata&gt;** account mastodon on  
 > **&lt;root&gt;** mastodon - Logging in: Login  
 > **&lt;root&gt;** mastodon - Logging in: Parsing application registration response  
