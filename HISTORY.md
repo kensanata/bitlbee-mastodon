@@ -1,5 +1,10 @@
 # The History of this Plugin
 
+New features for 1.4.3:
+
+- direct messages are now threaded correctly
+- search works for Mastodon 3.0.0 instances
+
 New features for 1.4.2:
 
 - 1.4.1 got mistagged, so this tag makes sure it all syncs up again
