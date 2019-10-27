@@ -30,7 +30,7 @@ install-data-local:
 	fi
 
 HELP.md: mastodon-help.txt Makefile
-	sed \
+	@ac_cv_path_SED@ \
 	-e '1i# Bitlbee Mastodon\nThis document was generated from the help text for the plugin.\n' \
 	-e '1d' \
 	-e 's/^%$$//g' \

@@ -27,11 +27,10 @@
 #include "nogaim.h"
 #include "mastodon-http.h"
 
-#define MASTODON_API_URL "https://octodon.social"
-
 // "2017-08-02T10:45:03.000Z" -- but we're ignoring microseconds and UTC timezone
 #define MASTODON_TIME_FORMAT "%Y-%m-%dT%H:%M:%S"
 
+#define MASTODON_API_ENDPOINT "/api/v1"
 #define MASTODON_REGISTER_APP_URL "/api/v1/apps"
 #define MASTODON_VERIFY_CREDENTIALS_URL "/api/v1/accounts/verify_credentials"
 #define MASTODON_STREAMING_USER_URL "/api/v1/streaming/user"

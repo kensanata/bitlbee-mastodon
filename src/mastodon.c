@@ -23,6 +23,8 @@
 *                                                                           *
 ****************************************************************************/
 
+#include "bitlbee.h"
+#include "account.h"
 #include "nogaim.h"
 #include "oauth.h"
 #include "oauth2.h"
@@ -32,6 +34,7 @@
 #include "rot13.h"
 #include "url.h"
 #include "help.h"
+#include <stdbool.h>
 
 #define HELPFILE_NAME "mastodon-help.txt"
 
@@ -251,15 +254,77 @@ static char *set_eval_visibility(set_t * set, char *value)
 static void mastodon_init(account_t * acc)
 {
 	set_t *s;
-	char *def_url;
+	
+	char* handle = acc -> user,
+	    * new_user_name;
+	bool change_user_name = false;
 
-	if (strcmp(acc->prpl->name, "mastodon") == 0) {
-		def_url = MASTODON_API_URL;
+	if (*handle == '@') {
+		change_user_name = true;
+		new_user_name = ++ handle;
+	} else new_user_name = acc -> user;
+
+	size_t handle_sz = strlen(handle);
+	char const* base_url;
+
+	while (*handle != '@') {
+		if (*handle == 0) {
+			/* the user has entered an invalid handle - the smart thing
+			 * to do here would be to fail, but bitlbee doesn't provide
+			 * a way for us to indicate that an account add command has
+			 * failed, so we glue a common instance name to the account
+			 * and hope for the best */
+			base_url = "https://mastodon.social" MASTODON_API_ENDPOINT;
+			goto no_instance_in_username;
+		}
+		handle++;
+	}
+
+	*handle = 0; /* delete the server component from the handle */
+	change_user_name = true;
+	size_t endpoint_sz = (handle - (acc -> user));
+	handle_sz -= endpoint_sz + 1;
+	
+	/* construct a server url */ {
+		char const* instance = handle + 1;
+		char* endpoint = alloca( /* using alloca instead of VLAs to
+									avoid thorny scope problems */
+			endpoint_sz +
+			sizeof "https://" +
+			sizeof MASTODON_API_ENDPOINT +
+			1 /* trailing nul */
+		);
+
+		char* eptr = endpoint;
+		eptr = g_stpcpy(eptr, "https://");
+		eptr = g_stpcpy(eptr, instance);
+		eptr = g_stpcpy(eptr, MASTODON_API_ENDPOINT);
+
+		base_url = endpoint;
+	}
+
+no_instance_in_username:
+	if (change_user_name) {
+		char saved_str [handle_sz + 1]; g_stpcpy(saved_str, new_user_name);
+		/* i promise i can explain.
+		 * i haven't dug too deeply into what causes this bug, because
+		 * it's 5am and i've gotten no sleep tonight, but for some
+		 * ungodly reason - due to a bug in either glib or the bitlbee
+		 * set structure - passing a substring of the set's existing
+		 * value appears to cause memory corruption of some kind (in
+		 * this instance, deleting the first character of the username.)
+		 * temporarily duplicating the string and setting it from the
+		 * duplicate seems to fix the problem. it's an atrocious hack,
+		 * and if you're reading this, i beg you to do what i did not
+		 * have the strength to, and figure out why on god's green
+		 * earth it happened. */
+
+		set_setstr(&acc -> set, "username", saved_str);
 	}
 
 	s = set_add(&acc->set, "auto_reply_timeout", "10800", set_eval_int, acc);
 
-	s = set_add(&acc->set, "base_url", def_url, NULL, acc);
+	s = set_add(&acc->set, "base_url", base_url, NULL, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "commands", "true", set_eval_commands, acc);

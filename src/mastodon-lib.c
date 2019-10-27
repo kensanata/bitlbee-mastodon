@@ -38,6 +38,7 @@
 #include "base64.h"
 #include "mastodon-lib.h"
 #include "oauth2.h"
+#include "json.h"
 #include "json_util.h"
 #include <assert.h>
 #include <ctype.h>
@@ -2560,7 +2561,7 @@ void mastodon_http_search(struct http_request *req)
 		for (i = 0; i < v->u.array.length; i++) {
 			json_value *a;
 			a = v->u.array.values[i];
-			if ((a->type == json_object)) {
+			if (a->type == json_object) {
 				mastodon_log(ic, "@%s %s",
 					     json_o_str(a, "acct"),
 					     json_o_str(a, "display_name"));
@@ -3658,6 +3659,7 @@ void mastodon_http_list_delete2(struct http_request *req) {
 	goto success;
 finish:
 	mc_free(mc);
+	return;
 success:
 	json_value_free(parsed);
 }

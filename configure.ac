@@ -92,6 +92,7 @@ AS_IF(
 )
 
 AC_SUBST([datadir])
+AC_SUBST([ac_cv_path_SED])
 
 AC_CONFIG_FILES([Makefile src/Makefile doc/Makefile])
 AC_OUTPUT
