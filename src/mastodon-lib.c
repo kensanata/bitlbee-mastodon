@@ -3710,7 +3710,7 @@ void mastodon_unknown_list_delete(struct im_connection *ic, char *title) {
 		mc->undo = g_strdup_printf("list create %s", title);
 	}
 	mastodon_with_named_list(ic, mc, mastodon_http_list_delete);
-};
+}
 
 /**
  * Part two of the first callback: now we have mc->id. Call the URL which will give us the accounts themselves. The API
@@ -3749,7 +3749,7 @@ void mastodon_unknown_list_add_account(struct im_connection *ic, guint64 id, cha
 		mc->undo = g_strdup_printf("list remove %" G_GINT64_FORMAT " from %s", id, title);
 	}
 	mastodon_with_named_list(ic, mc, mastodon_http_list_add_account);
-};
+}
 
 /**
  * Part two of the first callback: now we have mc->id. Call the URL which will give us the accounts themselves. The API

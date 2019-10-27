@@ -28,9 +28,9 @@
 #pragma once
 
 #ifdef DEBUG_MASTODON
-#define debug(text ...) imcb_log(ic, text);
+#define debug(...) imcb_log(ic, __VA_ARGS__);
 #else
-#define debug(text ...)
+#define debug(...)
 #endif
 
 #define MASTODON_OAUTH_HANDLE "mastodon_oauth"
