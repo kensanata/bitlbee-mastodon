@@ -3656,12 +3656,12 @@ void mastodon_http_list_delete2(struct http_request *req) {
 	char *url = g_strdup_printf(MASTODON_LIST_DATA_URL, mc->id);
 	mastodon_http(ic, url, mastodon_http_callback_and_ack, mc, HTTP_DELETE, NULL, 0);
 	g_free(url);
-	goto success;
-finish:
-	mc_free(mc);
-	return;
-success:
 	json_value_free(parsed);
+	return;
+finish:
+	/* We have encountered a problem an need to free mc. If we don't run into a problem, mc is passed on to the next
+	 * request. But not here. */
+	mc_free(mc);
 }
 
 /**
