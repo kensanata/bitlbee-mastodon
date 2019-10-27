@@ -39,6 +39,12 @@ The build system is distributed under the
 Anything without an obvious license in the file header also uses the
 GPL 2.0 or any later version.
 
+
+Contributors
+------------
+
+* [velartrill](http://github.com/velartrill) <lexi@hale.su>
+
 Usage
 -----
 
@@ -57,10 +63,8 @@ trying it.
 In your **&bitlbee** channel, add a new account, change it's
 **base_url** to point at your instance, and switch it on:
 
-> **&lt;kensanata&gt;** account add mastodon @kensanata  
+> **&lt;kensanata&gt;** account add mastodon kensanata@mastodon.weaponvsac.space
 > **&lt;root&gt;** Account successfully added with tag mastodon  
-> **&lt;kensanata&gt;** account mastodon set base_url https://mastodon.weaponvsac.space  
-> **&lt;root&gt;** base_url = `https://mastodon.weaponvsac.space'  
 > **&lt;kensanata&gt;** account mastodon on  
 > **&lt;root&gt;** mastodon - Logging in: Login  
 > **&lt;root&gt;** mastodon - Logging in: Parsing application registration response  
@@ -141,7 +145,7 @@ Build dependencies
   
   \*BSD users should install `autoconf`, `automake` and `libtool`, 
   preferably the latest version available. FreeBSD will also need 
-  `pkgconfig` on top of that.
+  `pkgconfig` on top of that. GNU `sed` (gsed), GNU `make` (gmake), and the `bash` shell are also required -- BSD `make` cannot successfully build bitlbee-mastodon, and the build process uses GNU extensions to both the Bourne shell and `sed`.
 
 
 Building and Installing
