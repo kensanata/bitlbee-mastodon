@@ -254,7 +254,7 @@ static char *set_eval_visibility(set_t * set, char *value)
 static void mastodon_init(account_t * acc)
 {
 	set_t *s;
-	
+
 	char* handle = acc -> user,
 	    * new_user_name;
 	bool change_user_name = false;
@@ -274,7 +274,7 @@ static void mastodon_init(account_t * acc)
 			 * a way for us to indicate that an account add command has
 			 * failed, so we glue a common instance name to the account
 			 * and hope for the best */
-			base_url = "https://mastodon.social" MASTODON_API_ENDPOINT;
+			base_url = MASTODON_DEFAULT_INSTANCE;
 			goto no_instance_in_username;
 		}
 		handle++;
@@ -284,21 +284,19 @@ static void mastodon_init(account_t * acc)
 	change_user_name = true;
 	size_t endpoint_sz = (handle - (acc -> user));
 	handle_sz -= endpoint_sz + 1;
-	
+
 	/* construct a server url */ {
 		char const* instance = handle + 1;
 		char* endpoint = alloca( /* using alloca instead of VLAs to
 									avoid thorny scope problems */
 			endpoint_sz +
 			sizeof "https://" +
-			sizeof MASTODON_API_ENDPOINT +
 			1 /* trailing nul */
 		);
 
 		char* eptr = endpoint;
 		eptr = g_stpcpy(eptr, "https://");
 		eptr = g_stpcpy(eptr, instance);
-		eptr = g_stpcpy(eptr, MASTODON_API_ENDPOINT);
 
 		base_url = endpoint;
 	}
