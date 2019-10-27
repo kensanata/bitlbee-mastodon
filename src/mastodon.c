@@ -303,21 +303,7 @@ static void mastodon_init(account_t * acc)
 
 no_instance_in_username:
 	if (change_user_name) {
-		char saved_str [handle_sz + 1]; g_stpcpy(saved_str, new_user_name);
-		/* i promise i can explain.
-		 * i haven't dug too deeply into what causes this bug, because
-		 * it's 5am and i've gotten no sleep tonight, but for some
-		 * ungodly reason - due to a bug in either glib or the bitlbee
-		 * set structure - passing a substring of the set's existing
-		 * value appears to cause memory corruption of some kind (in
-		 * this instance, deleting the first character of the username.)
-		 * temporarily duplicating the string and setting it from the
-		 * duplicate seems to fix the problem. it's an atrocious hack,
-		 * and if you're reading this, i beg you to do what i did not
-		 * have the strength to, and figure out why on god's green
-		 * earth it happened. */
-
-		set_setstr(&acc -> set, "username", saved_str);
+		set_setstr(&acc -> set, "username", g_strdup(new_user_name));
 	}
 
 	s = set_add(&acc->set, "auto_reply_timeout", "10800", set_eval_int, acc);
