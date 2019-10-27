@@ -27,7 +27,7 @@
 #include "nogaim.h"
 #include "mastodon-http.h"
 
-#define MASTODON_DEFAULT_INSTANCE "https://mastodon.social"
+#define MASTODON_DEFAULT_INSTANCE "https://octodon.social"
 
 // "2017-08-02T10:45:03.000Z" -- but we're ignoring microseconds and UTC timezone
 #define MASTODON_TIME_FORMAT "%Y-%m-%dT%H:%M:%S"
