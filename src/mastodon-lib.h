@@ -32,55 +32,61 @@
 // "2017-08-02T10:45:03.000Z" -- but we're ignoring microseconds and UTC timezone
 #define MASTODON_TIME_FORMAT "%Y-%m-%dT%H:%M:%S"
 
-#define MASTODON_REGISTER_APP_URL "/api/v1/apps"
-#define MASTODON_VERIFY_CREDENTIALS_URL "/api/v1/accounts/verify_credentials"
-#define MASTODON_STREAMING_USER_URL "/api/v1/streaming/user"
-#define MASTODON_STREAMING_HASHTAG_URL "/api/v1/streaming/hashtag"
-#define MASTODON_STREAMING_LOCAL_URL "/api/v1/streaming/public/local"
-#define MASTODON_STREAMING_FEDERATED_URL "/api/v1/streaming/public"
-#define MASTODON_STREAMING_LIST_URL "/api/v1/streaming/list"
-#define MASTODON_HOME_TIMELINE_URL "/api/v1/timelines/home"
-#define MASTODON_PUBLIC_TIMELINE_URL "/api/v1/timelines/public"
-#define MASTODON_HASHTAG_TIMELINE_URL "/api/v1/timelines/tag/%s"
-#define MASTODON_LIST_TIMELINE_URL "/api/v1/timelines/list/%" G_GINT64_FORMAT
-#define MASTODON_NOTIFICATIONS_URL "/api/v1/notifications"
+#define MASTODON_API(version) "/api/v" #version
+#define MASTODON_REGISTER_APP_URL MASTODON_API(1) "/apps"
+#define MASTODON_VERIFY_CREDENTIALS_URL MASTODON_API(1) "/accounts/verify_credentials"
+#define MASTODON_STREAMING_USER_URL      MASTODON_API(1) "/streaming/user"
+#define MASTODON_STREAMING_HASHTAG_URL   MASTODON_API(1) "/streaming/hashtag"
+#define MASTODON_STREAMING_LOCAL_URL     MASTODON_API(1) "/streaming/public/local"
+#define MASTODON_STREAMING_FEDERATED_URL MASTODON_API(1) "/streaming/public"
+#define MASTODON_STREAMING_LIST_URL      MASTODON_API(1) "/streaming/list"
+#define MASTODON_HOME_TIMELINE_URL       MASTODON_API(1) "/timelines/home"
+#define MASTODON_PUBLIC_TIMELINE_URL     MASTODON_API(1) "/timelines/public"
+#define MASTODON_HASHTAG_TIMELINE_URL    MASTODON_API(1) "/timelines/tag/%s"
+#define MASTODON_LIST_TIMELINE_URL       MASTODON_API(1) "/timelines/list/%" G_GINT64_FORMAT
+#define MASTODON_NOTIFICATIONS_URL       MASTODON_API(1) "/notifications"
 
-#define MASTODON_REPORT_URL "/api/v1/reports"
-#define MASTODON_SEARCH_URL "/api/v2/search"
+#define MASTODON_REPORT_URL MASTODON_API(1) "/reports"
+#define MASTODON_SEARCH_URL MASTODON_API(2) "/search"
 
-#define MASTODON_INSTANCE_URL "/api/v1/instance"
+#define MASTODON_INSTANCE_URL MASTODON_API(1) "/instance"
 
-#define MASTODON_STATUS_POST_URL "/api/v1/statuses"
-#define MASTODON_STATUS_URL "/api/v1/statuses/%" G_GINT64_FORMAT
-#define MASTODON_STATUS_BOOST_URL "/api/v1/statuses/%" G_GINT64_FORMAT "/reblog"
-#define MASTODON_STATUS_UNBOOST_URL "/api/v1/statuses/%" G_GINT64_FORMAT "/unreblog"
-#define MASTODON_STATUS_MUTE_URL "/api/v1/statuses/%" G_GINT64_FORMAT "/mute"
-#define MASTODON_STATUS_UNMUTE_URL "/api/v1/statuses/%" G_GINT64_FORMAT "/unmute"
-#define MASTODON_STATUS_FAVOURITE_URL "/api/v1/statuses/%" G_GINT64_FORMAT "/favourite"
-#define MASTODON_STATUS_UNFAVOURITE_URL "/api/v1/statuses/%" G_GINT64_FORMAT "/unfavourite"
-#define MASTODON_STATUS_PIN_URL "/api/v1/statuses/%" G_GINT64_FORMAT "/pin"
-#define MASTODON_STATUS_UNPIN_URL "/api/v1/statuses/%" G_GINT64_FORMAT "/unpin"
-#define MASTODON_STATUS_CONTEXT_URL "/api/v1/statuses/%" G_GINT64_FORMAT "/context"
+#define MASTODON_ID_FORMAT(prefix,suffix) MASTODON_API(1) "/" prefix "/%" G_GINT64_FORMAT suffix
 
-#define MASTODON_ACCOUNT_URL "/api/v1/accounts/%" G_GINT64_FORMAT
-#define MASTODON_ACCOUNT_SEARCH_URL "/api/v1/accounts/search"
-#define MASTODON_ACCOUNT_STATUSES_URL "/api/v1/accounts/%" G_GINT64_FORMAT "/statuses"
-#define MASTODON_ACCOUNT_FOLLOWING_URL "/api/v1/accounts/%" G_GINT64_FORMAT "/following"
-#define MASTODON_ACCOUNT_BLOCK_URL "/api/v1/accounts/%" G_GINT64_FORMAT "/block"
-#define MASTODON_ACCOUNT_UNBLOCK_URL "/api/v1/accounts/%" G_GINT64_FORMAT "/unblock"
-#define MASTODON_ACCOUNT_FOLLOW_URL "/api/v1/accounts/%" G_GINT64_FORMAT "/follow"
-#define MASTODON_ACCOUNT_UNFOLLOW_URL "/api/v1/accounts/%" G_GINT64_FORMAT "/unfollow"
-#define MASTODON_ACCOUNT_MUTE_URL "/api/v1/accounts/%" G_GINT64_FORMAT "/mute"
-#define MASTODON_ACCOUNT_UNMUTE_URL "/api/v1/accounts/%" G_GINT64_FORMAT "/unmute"
+#define MASTODON_STATUS_FORMAT(suffix)  MASTODON_ID_FORMAT("statuses",suffix)
+#define MASTODON_STATUS_POST_URL        MASTODON_API(1) "/statuses"
+#define MASTODON_STATUS_URL             MASTODON_STATUS_FORMAT("")
+#define MASTODON_STATUS_BOOST_URL       MASTODON_STATUS_FORMAT("/reblog")
+#define MASTODON_STATUS_UNBOOST_URL     MASTODON_STATUS_FORMAT("/unreblog")
+#define MASTODON_STATUS_MUTE_URL        MASTODON_STATUS_FORMAT("/mute")
+#define MASTODON_STATUS_UNMUTE_URL      MASTODON_STATUS_FORMAT("/unmute")
+#define MASTODON_STATUS_FAVOURITE_URL   MASTODON_STATUS_FORMAT("/favourite")
+#define MASTODON_STATUS_UNFAVOURITE_URL MASTODON_STATUS_FORMAT("/unfavourite")
+#define MASTODON_STATUS_PIN_URL         MASTODON_STATUS_FORMAT("/pin")
+#define MASTODON_STATUS_UNPIN_URL       MASTODON_STATUS_FORMAT("/unpin")
+#define MASTODON_STATUS_CONTEXT_URL     MASTODON_STATUS_FORMAT("/context")
 
-#define MASTODON_LIST_URL "/api/v1/lists"
-#define MASTODON_LIST_DATA_URL "/api/v1/lists/%" G_GINT64_FORMAT
-#define MASTODON_LIST_ACCOUNTS_URL "/api/v1/lists/%" G_GINT64_FORMAT "/accounts"
+#define MASTODON_ACCOUNT_FORMAT(suffix) MASTODON_ID_FORMAT("accounts",suffix)
+#define MASTODON_ACCOUNT_URL            MASTODON_ACCOUNT_FORMAT("")
+#define MASTODON_ACCOUNT_SEARCH_URL     MASTODON_ACCOUNT_FORMAT("/search")
+#define MASTODON_ACCOUNT_STATUSES_URL   MASTODON_ACCOUNT_FORMAT("/statuses")
+#define MASTODON_ACCOUNT_FOLLOWING_URL  MASTODON_ACCOUNT_FORMAT("/following")
+#define MASTODON_ACCOUNT_BLOCK_URL      MASTODON_ACCOUNT_FORMAT("/block")
+#define MASTODON_ACCOUNT_UNBLOCK_URL    MASTODON_ACCOUNT_FORMAT("/unblock")
+#define MASTODON_ACCOUNT_FOLLOW_URL     MASTODON_ACCOUNT_FORMAT("/follow")
+#define MASTODON_ACCOUNT_UNFOLLOW_URL   MASTODON_ACCOUNT_FORMAT("/unfollow")
+#define MASTODON_ACCOUNT_MUTE_URL       MASTODON_ACCOUNT_FORMAT("/mute")
+#define MASTODON_ACCOUNT_UNMUTE_URL     MASTODON_ACCOUNT_FORMAT("/unmute")
 
-#define MASTODON_FILTER_URL "/api/v1/filters"
-#define MASTODON_FILTER_DATA_URL "/api/v1/filters/%" G_GINT64_FORMAT
+#define MASTODON_LIST_URL MASTODON_API(1) "/lists"
+#define MASTODON_LIST_FORMAT(suffix) MASTODON_ID_FORMAT("lists",suffix)
+#define MASTODON_LIST_DATA_URL       MASTODON_STATUS_FORMAT("")
+#define MASTODON_LIST_ACCOUNTS_URL   MASTODON_STATUS_FORMAT("/accounts")
 
-#define MASTODON_ACCOUNT_RELATIONSHIP_URL "/api/v1/accounts/relationships"
+#define MASTODON_FILTER_URL MASTODON_API(1) "/filters"
+#define MASTODON_FILTER_DATA_URL MASTODON_API(1) "/filters/%" G_GINT64_FORMAT
+
+#define MASTODON_ACCOUNT_RELATIONSHIP_URL MASTODON_API(1) "/accounts/relationships"
 
 typedef enum {
 	MASTODON_EVT_UNKNOWN,
