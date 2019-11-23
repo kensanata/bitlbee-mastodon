@@ -187,8 +187,8 @@ again.
 Bugs
 ----
 
-[Crashing while running Twitter](https://alexschroeder.ch/software/Crashing_while_running_Twitter):
-There seems to be some sort of interaction between the Twitter code
+🔥 [Crashing while running Twitter](https://alexschroeder.ch/software/Crashing_while_running_Twitter):
+there seems to be some sort of interaction between the Twitter code
 and the Mastodon plugin. If you get connected to Mastodon and then
 Bitlbee crashes, and you have a Twitter account set up, try this:
 
@@ -196,33 +196,51 @@ Bitlbee crashes, and you have a Twitter account set up, try this:
 2. take the Mastodon account online
 3. take the Twitter account online
 
+🔥 [Cannot use Pleroma](https://alexschroeder.ch/software/Support_Websockets_for_Streaming):
+there are two ways to do streaming for Mastodon: regular long-running
+requests, one per stream, or a single websocket that provides all the
+streaming info. Sadly, the Mastodon plugin only supports the former
+and Pleroma only supports the latter.
+
+🔥 **No support for 2FA**: the Mastodon plugin knows about OAuth,
+which means it doesn't ask you for the password of your Mastodon
+account. Instead, it gives you an URL on your instance where you
+identify yourself and get back a token which you then give the
+Mastodon plugin. You can revoke this token from your instance by going
+to Preferences → Account → Authorized Apps and looking for Bitlbee.
+Sadly, the Mastodon plugin doesn't know about 2FA (two-factor auth).
+
 Debugging
 ---------
 
 Before debugging Bitlbee, you probably need to stop the system from
-running Bitlbee. I'm still unsure of how to do it.
-
-```
-sudo killall bitlbee
-```
-
-Usually my system will restart Bitlbee after a bit, though. So I'll
-try some of the following:
+running Bitlbee. I'm still unsure of how to do it. The following seems
+to do it:
 
 ```
 sudo systemctl stop bitlbee
+sudo killall bitlbee
 ```
 
 You can enable extra debug output for `bitlbee-mastodon` by setting
 the `BITLBEE_DEBUG` environment variable. This will print all traffic
 it exchanges with Mastodon servers to STDOUT and there is a lot of it.
-To get it on your screen run `bitlbee` in foreground mode:
+You can see this output in the systemd journal:
+
+```
+sudo journalctl -fu bitlbee
+```
+
+Alternatively, run `bitlbee` in foreground mode:
 
 ```
 BITLBEE_DEBUG=1 bitlbee -nvD
 ```
 
-If you need to read your config file from the standard location:
+If you run this as a normal use, bitlbee cannot read its config file
+and thus won't know about your existing accounts. If you need to read
+your config file from the standard location, run it as the bitlbee
+user:
 
 ```
 BITLBEE_DEBUG=1 sudo -u bitlbee bitlbee -nvD
