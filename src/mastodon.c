@@ -30,6 +30,7 @@
 #include "oauth2.h"
 #include "mastodon.h"
 #include "mastodon-http.h"
+#include "mastodon-websockets.h"
 #include "mastodon-lib.h"
 #include "rot13.h"
 #include "url.h"
@@ -429,7 +430,9 @@ static void mastodon_connect(struct im_connection *ic)
 	}
 
 	mastodon_initial_timeline(ic);
-	mastodon_open_user_stream(ic);
+	// mastodon_open_user_stream(ic);
+	mastodon_open_user_websocket(ic);
+
 	ic->flags |= OPT_PONGS;
 }
 
@@ -539,12 +542,20 @@ static void mastodon_logout(struct im_connection *ic)
 		}
 
 		GSList *l;
+
 		for (l = md->streams; l; l = l->next) {
 			struct http_request *req = l->data;
 			http_close(req);
 		}
 
 		g_slist_free(md->streams); md->streams = NULL;
+
+		for (l = md->websockets; l; l = l->next) {
+			struct mastodon_websocket *mw = l->data;
+			mw_free(mw);
+		}
+
+		g_slist_free(md->websockets); md->websockets = NULL;
 
 		if (md->log) {
 			/* When mastodon_connect hasn't been called, yet, such as when imc_logout is being called from

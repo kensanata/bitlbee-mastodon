@@ -118,6 +118,33 @@ typedef enum {
 	MC_FILTER_DELETE,
 } mastodon_command_type_t;
 
+typedef enum {
+	WS_IDLE,
+	WS_CONNECTING,
+	WS_CONNECTED,
+	WS_ALMOST_READY,
+	WS_READY,
+	WS_CLOSING,
+} ws_state_t;
+
+typedef enum {
+	MT_HOME,
+	MT_LOCAL,
+	MT_FEDERATED,
+	MT_HASHTAG,
+	MT_LIST,
+} mastodon_timeline_type_t;
+
+struct mastodon_websocket {
+	ws_state_t state;
+	void *ssl;
+	int  sslfd;
+	gint inpa;
+	char *url;
+	mastodon_timeline_type_t subscription;
+	struct im_connection *ic;
+};
+
 struct mastodon_log_data;
 
 #define MASTODON_MAX_UNDO 10
@@ -162,6 +189,9 @@ struct mastodon_data {
 	gboolean url_ssl;
 	int url_port;
 	char *url_host;
+
+	/* web socket */
+	GSList *websockets; /* of struct mastodon_websocket */
 
 	char *name; /* Used to generate contact + channel name. */
 

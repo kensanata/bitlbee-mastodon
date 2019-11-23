@@ -45,14 +45,6 @@
 #include <errno.h>
 
 typedef enum {
-	MT_HOME,
-	MT_LOCAL,
-	MT_FEDERATED,
-	MT_HASHTAG,
-	MT_LIST,
-} mastodon_timeline_type_t;
-
-typedef enum {
 	ML_STATUS,
 	ML_NOTIFICATION,
 } mastodon_list_type_t;
@@ -1299,6 +1291,8 @@ static void mastodon_stream_handle_update(struct im_connection *ic, json_value *
 		ms->subscription = subscription;
 		mastodon_status_show(ic, ms);
 		ms_free(ms);
+	} else {
+		imcb_log(ic, "unable to parse status of update event");
 	}
 }
 
@@ -1322,7 +1316,7 @@ static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *
 	}
 }
 
-static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type,
+void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type,
 					 json_value *parsed, mastodon_timeline_type_t subscription)
 {
 	if (evt_type == MASTODON_EVT_UPDATE) {
