@@ -198,9 +198,9 @@ Bitlbee crashes, and you have a Twitter account set up, try this:
 
 🔥 [Cannot use Pleroma](https://alexschroeder.ch/software/Support_Websockets_for_Streaming):
 there are two ways to do streaming for Mastodon: regular long-running
-requests, one per stream, or a single websocket that provides all the
-streaming info. Sadly, the Mastodon plugin only supports the former
-and Pleroma only supports the latter.
+HTTP requests, or a bunch of websockets that provides all the
+streaming info. Sadly, the Mastodon plugin only supports HTTP streaming
+and Pleroma only supports websockets. But we're [working on it](https://github.com/kensanata/bitlbee-mastodon/pull/43).
 
 🔥 **No support for 2FA**: the Mastodon plugin knows about OAuth,
 which means it doesn't ask you for the password of your Mastodon
