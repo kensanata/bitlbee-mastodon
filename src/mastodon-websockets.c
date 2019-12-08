@@ -61,6 +61,7 @@ void mw_free(struct mastodon_websocket *mw)
 		return;
 	}
 	mastodon_ws_cleanup(mw);
+	g_free(mw->url);
 	g_free(mw);
 }
 
@@ -404,7 +405,7 @@ struct mastodon_websocket *mastodon_ws_connect(struct im_connection *ic, char *u
 	struct mastodon_websocket *mw = g_new0(struct mastodon_websocket, 1);
 	mw->subscription = subscription;
 	mw->ic = ic;
-	mw->url = url;
+	mw->url = g_strdup(url); /* make a copy because some URLs are dynamic */
 	mw->state = WS_CONNECTING;
 	mw->ssl = ssl_connect(md->url_host, md->url_port, TRUE, mastodon_ws_connected_callback, mw);
 	if (mw->ssl == NULL) {
