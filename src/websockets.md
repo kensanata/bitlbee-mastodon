@@ -2,20 +2,15 @@
 
 Current status:
 
-1. the home timeline is handled via websockets! 🎉
+1. all the timelines are handled via websockets; home, local and
+   federated timelines work as expected
 
-2. there is a timeout every two minutes? 😔
+2. joining a hashtag timeline and a list timeline doesn't work: every
+   5s you'll get a new topic setup message ("root TOPIC BitlBee
+   groupchat: "scotland". Please keep in mind that root-commands won't
+   work here. Have fun!") and when you part, bitlbee crashes
 
-Next up:
-
-1. fix the timeouts
-
-1. take a look at `mastodon_chat_join` and replace all the streaming
-   requests with websockets
-   
-2. think about removing the streaming requests or about making it
-   depend on an option
-
+3. adding people to a list doesn't work
 
 ## Specification
 

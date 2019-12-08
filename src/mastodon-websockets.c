@@ -136,7 +136,7 @@ static gboolean mastodon_ws_send_pong(struct mastodon_websocket *mw, gchar *buf,
 	return FALSE; /* FALSE means we haven't been disconnected */
 }
 
-static void mastodon_handle_event(struct mastodon_websocket *mw, json_value *parsed)
+static void mastodon_handle_parsed_event(struct mastodon_websocket *mw, json_value *parsed)
 {
 	struct im_connection *ic = mw->ic;
 	mastodon_evt_flags_t evt_type = MASTODON_EVT_UNKNOWN;
@@ -161,13 +161,13 @@ static void mastodon_handle_event(struct mastodon_websocket *mw, json_value *par
 	// imcb_log(ic, "handling event: %s", payload);
 	if (payload &&
 		(event = json_parse(payload, strlen(payload)))) {
-		mastodon_stream_handle_event(ic, evt_type, event, mw->subscription);
+		mastodon_handle_event(ic, evt_type, event, mw->subscription);
 	} else {
 		imcb_log(ic, "unable to parse payload: %s", payload);
 	}
 }
 
-static gboolean mastodon_handle(struct mastodon_websocket *mw, int opcode, gchar *data, guint64 len)
+static gboolean mastodon_handle_incoming(struct mastodon_websocket *mw, int opcode, gchar *data, guint64 len)
 {
 	struct im_connection *ic = mw->ic;
 
@@ -181,7 +181,7 @@ static gboolean mastodon_handle(struct mastodon_websocket *mw, int opcode, gchar
 	json_value *parsed;
 	if ((parsed = json_parse(data, len))) {
 		// imcb_log(ic, "parsed data on %s: %s", mw->url, (char*)data);
-		mastodon_handle_event(mw, parsed);
+		mastodon_handle_parsed_event(mw, parsed);
 		json_value_free(parsed);
 	} else {
 		imcb_log(ic, "unparsed data on %s: %s", mw->url, (char*)data);
@@ -321,10 +321,10 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 
 		if (mask) {
 			gchar *mdata = mastodon_ws_mask(mkey, rdata, len);
-			disconnected = mastodon_handle(mw, opcode, mdata, len);
+			disconnected = mastodon_handle_incoming(mw, opcode, mdata, len);
 			g_free(mdata);
 		} else {
-			disconnected = mastodon_handle(mw, opcode, rdata, len);
+			disconnected = mastodon_handle_incoming(mw, opcode, rdata, len);
 		}
 		g_free(rdata);
 		if (disconnected)
@@ -397,9 +397,9 @@ static gboolean mastodon_ws_connected_callback(gpointer data, int retcode, void 
 }
 
 /**
- * Generic websocket connection for any URL.
+ * Generic websocket connection for any URL. The websocket is also added to the list of websockets in mastodon_data.
  */
-void mastodon_ws_connect(struct im_connection *ic, char *url, mastodon_timeline_type_t subscription) {
+struct mastodon_websocket *mastodon_ws_connect(struct im_connection *ic, char *url, mastodon_timeline_type_t subscription) {
 	struct mastodon_data *md = ic->proto_data;
 	struct mastodon_websocket *mw = g_new0(struct mastodon_websocket, 1);
 	mw->subscription = subscription;
@@ -409,8 +409,10 @@ void mastodon_ws_connect(struct im_connection *ic, char *url, mastodon_timeline_
 	mw->ssl = ssl_connect(md->url_host, md->url_port, TRUE, mastodon_ws_connected_callback, mw);
 	if (mw->ssl == NULL) {
 		mw_free(mw);
+		return NULL;
 	} else {
 		md->websockets = g_slist_prepend(md->websockets, mw);
+		return mw;
 	}
 }
 
@@ -442,7 +444,44 @@ static void mastodon_ws_reconnect(struct mastodon_websocket *mw)
 /**
  * Open the user (home) timeline via a websocket
  */
-void mastodon_open_user_websocket(struct im_connection *ic)
+struct mastodon_websocket *mastodon_open_user_websocket(struct im_connection *ic)
 {
-	mastodon_ws_connect(ic, MASTODON_WEBSOCKET_USER_URL, MT_HOME);
+	return mastodon_ws_connect(ic, MASTODON_WEBSOCKET_USER_URL, MT_HOME);
+}
+
+/**
+ * Open the local public timeline via a websocket
+ */
+struct mastodon_websocket *mastodon_open_local_websocket(struct im_connection *ic)
+{
+	return mastodon_ws_connect(ic, MASTODON_WEBSOCKET_LOCAL_URL, MT_LOCAL);
+}
+
+/**
+ * Open the federated public timeline via a websocket
+ */
+struct mastodon_websocket *mastodon_open_federated_websocket(struct im_connection *ic)
+{
+	return mastodon_ws_connect(ic, MASTODON_WEBSOCKET_FEDERATED_URL, MT_FEDERATED);
+}
+
+/**
+ * Open the federated public timeline via a websocket
+ */
+struct mastodon_websocket *mastodon_open_hashtag_websocket(struct im_connection *ic, char *hashtag)
+{
+	char *url = g_strdup_printf(MASTODON_WEBSOCKET_HASHTAG_URL, hashtag);
+	struct mastodon_websocket *mw = mastodon_ws_connect(ic, url, MT_HASHTAG);
+	g_free(url);
+	return mw;
+}
+
+/**
+ * Open the list timeline via a websocket. Note that we need the list id, not the list name!
+ */
+struct mastodon_websocket *mastodon_open_list_websocket(struct im_connection *ic, guint64 id) {
+	char *url = g_strdup_printf(MASTODON_WEBSOCKET_LIST_URL, id);
+	struct mastodon_websocket *mw = mastodon_ws_connect(ic, url, MT_LIST);
+	g_free(url);
+	return mw;
 }

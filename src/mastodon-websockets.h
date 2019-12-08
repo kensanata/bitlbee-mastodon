@@ -21,5 +21,9 @@
 #include "mastodon.h"
 
 void mw_free(struct mastodon_websocket *mw);
-void mastodon_ws_connect(struct im_connection *ic, char *url, mastodon_timeline_type_t subscription);
-void mastodon_open_user_websocket(struct im_connection *ic);
+
+struct mastodon_websocket *mastodon_open_user_websocket(struct im_connection *ic);
+struct mastodon_websocket *mastodon_open_local_websocket(struct im_connection *ic);
+struct mastodon_websocket *mastodon_open_federated_websocket(struct im_connection *ic);
+struct mastodon_websocket *mastodon_open_hashtag_websocket(struct im_connection *ic, char *hashtag);
+struct mastodon_websocket *mastodon_open_list_websocket(struct im_connection *ic, guint64 id);
