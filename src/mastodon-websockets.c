@@ -177,6 +177,8 @@ static gboolean mastodon_handle_incoming(struct mastodon_websocket *mw, int opco
 	} else if (opcode != OPCODE_TEXT) {
 		imcb_error(ic, "Unhandled opcode %d on %s: %s", opcode, mw->url, (char*)data);
 		return FALSE; /* FALSE means we haven't been disconnected */
+	} else if (len == 0) {
+		return FALSE; /* FALSE means we haven't been disconnected */
 	}
 
 	json_value *parsed;
@@ -370,7 +372,7 @@ static gboolean mastodon_ws_connected_callback(gpointer data, int retcode, void 
   bkey = g_base64_encode(key, 16);
 
   req = g_string_new("");
-  g_string_printf(req, "GET %s HTTP/1.1\r\n"
+  g_string_printf(req, "GET %s%s&access_token=%s HTTP/1.1\r\n"
 				  "Host: %s\r\n"
 				  "Connection: keep-alive, Upgrade\r\n"
 				  "Upgrade: websocket\r\n"
@@ -382,10 +384,12 @@ static gboolean mastodon_ws_connected_callback(gpointer data, int retcode, void 
 				  "Sec-WebSocket-Key: %s\r\n"
 				  "User-Agent: BitlBee " BITLBEE_VERSION "\r\n"
 				  "\r\n",
-				  mw->url,
+				  mw->url, /* URL */
+				  g_strrstr(mw->url, "?") ? "" : "?", /* add a ? if there is none */
+				  md->oauth2_access_token, /* access token as URL parameter (for Pleroma) */
 				  md->url_host, /* Host */
 				  set_getstr(&ic->acc->set, "base_url"), /* Origin */
-				  md->oauth2_access_token, /* Authorization */
+				  md->oauth2_access_token, /* access token as HTTP header */
 				  bkey); /* Sec-WebSocket-Key */
 
   g_free(bkey);
