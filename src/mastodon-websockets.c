@@ -222,7 +222,7 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 			imc_logout(ic, TRUE);
 			return FALSE;
 		}
-	} else {
+	} else if (mw->state == WS_CONNECTED) {
 		gchar buf = 0 ;
 		guint64 len = 0;
 		gboolean mask = FALSE;
