@@ -11,6 +11,8 @@ where you already have an account. The benefit is that you can now use
 [any IRC client](https://en.wikipedia.org/wiki/Comparison_of_Internet_Relay_Chat_clients)
 you want to connect to Mastodon.
 
+![A screenshot of Emacs running the rcirc IRC client connected to a Mastodon instance via Bitlbee](pics/screenshot.png)
+
 Please report issues using the
 [Software Wiki](https://alexschroeder.ch/software/Bitlbee_Mastodon).
 For questions, ping **kensanata** on `irc.oftc.net/#bitlbee`.
