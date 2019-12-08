@@ -10,8 +10,6 @@ Current status:
    groupchat: "scotland". Please keep in mind that root-commands won't
    work here. Have fun!") and when you part, bitlbee crashes
 
-3. adding people to a list doesn't work
-
 ## Specification
 
 [RFC 6455](https://tools.ietf.org/html/rfc6455)
