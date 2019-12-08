@@ -132,7 +132,7 @@ static gboolean mastodon_ws_send_pong(struct mastodon_websocket *mw, gchar *buf,
 		mastodon_ws_send_payload(mw, OPCODE_PONG, buf, len); // if we managed zero bytes, we're disconnected
 		// imcb_log(ic, "sent back PONG for %s", mw->url);
 	} else {
-		imcb_log(ic, "attempt to send PONG in the wrong state: %d", mw->state);
+		imcb_error(ic, "Attempt to send PONG in the wrong state: %d", mw->state);
 	}
 	return FALSE; /* FALSE means we haven't been disconnected */
 }
@@ -153,7 +153,7 @@ static void mastodon_handle_parsed_event(struct mastodon_websocket *mw, json_val
 			evt_type = MASTODON_EVT_DELETE;
 		}
 	} else {
-		imcb_log(ic, "unknown JSON type %d", parsed->type);
+		imcb_error(ic, "Unknown JSON type %d", parsed->type);
 		return;
 	}
 
@@ -164,7 +164,7 @@ static void mastodon_handle_parsed_event(struct mastodon_websocket *mw, json_val
 		(event = json_parse(payload, strlen(payload)))) {
 		mastodon_handle_event(ic, evt_type, event, mw->subscription);
 	} else {
-		imcb_log(ic, "unable to parse payload: %s", payload);
+		imcb_error(ic, "Unable to parse payload: %s", payload);
 	}
 }
 
@@ -175,7 +175,7 @@ static gboolean mastodon_handle_incoming(struct mastodon_websocket *mw, int opco
 	if (opcode == OPCODE_PING) {
 		return mastodon_ws_send_pong(mw, data, len);
 	} else if (opcode != OPCODE_TEXT) {
-		imcb_log(ic, "unhandled opcode %d on %s: %s", opcode, mw->url, (char*)data);
+		imcb_error(ic, "Unhandled opcode %d on %s: %s", opcode, mw->url, (char*)data);
 		return FALSE; /* FALSE means we haven't been disconnected */
 	}
 
@@ -185,7 +185,7 @@ static gboolean mastodon_handle_incoming(struct mastodon_websocket *mw, int opco
 		mastodon_handle_parsed_event(mw, parsed);
 		json_value_free(parsed);
 	} else {
-		imcb_log(ic, "unparsed data on %s: %s", mw->url, (char*)data);
+		imcb_error(ic, "Unparsed data on %s: %s", mw->url, (char*)data);
 	}
 	return FALSE; /* FALSE means we haven't been disconnected */
 }
@@ -209,16 +209,16 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 		if (ssl_read(mw->ssl, buf, sizeof(buf)) < 1) {
 			if (ssl_errno == SSL_AGAIN)
 				return TRUE;
-			imcb_error(ic, "failed to read from %s while switching to websocket mode: %d", mw->url, ssl_errno);
+			imcb_error(ic, "Failed to read from %s while switching to websocket mode: %d", mw->url, ssl_errno);
 			imc_logout(ic, TRUE);
 			return FALSE;
 		}
 		if (g_strrstr_len(buf, 25, "101 Switching") != NULL
 			&& g_str_has_suffix(buf, "\r\n\r\n")) {
 			mw->state = WS_CONNECTED;
-			imcb_log(ic, "websocket connected: %s", mw->url);
+			imcb_log(ic, "Websocket connected: %s", mw->url);
 		} else {
-			imcb_error(ic, "failed to switch to websocket mode for %s", mw->url);
+			imcb_error(ic, "Failed to switch to websocket mode for %s", mw->url);
 			imc_logout(ic, TRUE);
 			return FALSE;
 		}
@@ -235,7 +235,7 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 		if (ssl_read(mw->ssl, &buf, 1) < 1) {
 			if (ssl_errno == SSL_AGAIN)
 				return TRUE;
-			imcb_error(ic, "failed to read ws header from %s: %d", mw->url, ssl_errno);
+			imcb_error(ic, "Failed to read ws header from %s: %d", mw->url, ssl_errno);
 			mastodon_ws_reconnect(mw);
 			return FALSE;
 		}
@@ -243,20 +243,20 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 		// imcb_log(ic, "read websocket header byte on %s: 0x%hhx", mw->url, buf);
 
 		fin = (buf & 0x80); /* first bit */
-		if (!fin) imcb_log(ic, "unsupported continuation seen on websocket %s", mw->url);
+		if (!fin) imcb_error(ic, "Unsupported continuation seen on websocket %s", mw->url);
 
 		int opcode = (buf & 0x0f); /* bits five to eight */
 		switch (opcode) {
 		case OPCODE_CONTINUATION:
-			imcb_log(ic, "websocket %s wants to continue", mw->url);
+			imcb_log(ic, "Websocket %s wants to continue", mw->url);
 			break; /* I hope we can handle this! */
 		case OPCODE_TEXT:
 			// imcb_log(ic, "websocket %s is sending text", mw->url);
 			break; /* we can handle this */
 		case OPCODE_CLOSE:
-			imcb_log(ic, "websocket %s is closing", mw->url);
+			imcb_log(ic, "Websocket %s is closing", mw->url);
 			if (mw->state == WS_CONNECTED) {
-				imcb_log(ic, "token expired, cleaning up");
+				imcb_log(ic, "Token expired, cleaning up");
 				set_setstr(&ic->acc->set, "token_cache", NULL);
 			}
 			imc_logout(ic, TRUE);
@@ -271,7 +271,7 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 		}
 
 		if (ssl_read(mw->ssl, &buf, 1) < 1) {
-			imcb_error(ic, "disconnected from %s", mw->url);
+			imcb_error(ic, "Disconnected from %s", mw->url);
 			imc_logout(ic, TRUE);
 			return FALSE;
 		}
@@ -281,7 +281,7 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 		if (len == 126) {
 			guint16 lbuf;
 			if (ssl_read(mw->ssl, (gchar*)&lbuf, 2) < 2) {
-				imcb_error(ic, "failed to read extended payload length on websocket %s", mw->url);
+				imcb_error(ic, "Failed to read extended payload length on websocket %s", mw->url);
 				imc_logout(ic, TRUE);
 				return FALSE;
 			}
@@ -289,7 +289,7 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 		} else if (len == 127) {
 			guint64 lbuf;
 			if (ssl_read(mw->ssl, (gchar*)&lbuf, 8) < 8) {
-				imcb_error(ic, "failed to read extended payload length continued on websocket %s", mw->url);
+				imcb_error(ic, "Failed to read extended payload length continued on websocket %s", mw->url);
 				imc_logout(ic, TRUE);
 				return FALSE;
 			}
@@ -298,7 +298,7 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 
 		if (mask) {
 			if (ssl_read(mw->ssl, (gchar*)mkey, 4) < 4) {
-				imcb_error(ic, "failed to read masking key on websocket %s", mw->url);
+				imcb_error(ic, "Failed to read masking key on websocket %s", mw->url);
 				imc_logout(ic, TRUE);
 				return FALSE;
 			}
@@ -314,7 +314,7 @@ static gboolean mastodon_ws_in_callback(gpointer data, int source, b_input_condi
 		}
 
 		if (read != len) {
-			imcb_error(ic, "failed to read enough payload data on websocket %s", mw->url);
+			imcb_error(ic, "Failed to read enough payload data on websocket %s", mw->url);
 			imc_logout(ic, TRUE);
 			g_free(rdata);
 			return FALSE;
