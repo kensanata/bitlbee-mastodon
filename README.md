@@ -216,8 +216,8 @@ Debugging
 ---------
 
 Before debugging Bitlbee, you probably need to stop the system from
-running Bitlbee. I'm still unsure of how to do it. The following seems
-to do it:
+running Bitlbee. The problem is that `systemd` was instructed not to
+kill it (`KillMode=process`). Therefore I run the following:
 
 ```
 sudo systemctl stop bitlbee
