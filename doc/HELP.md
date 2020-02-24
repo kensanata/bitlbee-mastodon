@@ -234,6 +234,8 @@ You should probably save this configuration.
 > **&lt;root&gt;** Configuration saved  
 
 ## read
+By default, you are connected to a channel showing your "home" timeline. You can use use the command **timeline home** to redisplay it, followed by **more** to go futher back in time. See *[public](#public)* for the other timelines.
+
 The default **mode** setting is **chat**. This means that each Mastodon account you add results in a new channel in your IRC client.
 
 Use **help set mode** in your Bitlbee control channel (**&bitlbee**) to read up on different modes.
