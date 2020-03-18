@@ -1,5 +1,10 @@
 # The History of this Plugin
 
+New features for 1.4.4:
+
+- fix list management command
+- figure out username and instance URL from account name
+
 New features for 1.4.3:
 
 - direct messages are now threaded correctly
