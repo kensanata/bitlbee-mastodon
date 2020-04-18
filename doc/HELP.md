@@ -319,6 +319,8 @@ Use **follow &lt;nick|account&gt;** to follow somebody. This determines the nick
 
 Usually you'll be providing a local or remote account to follow. In the background, Bitlbee will run a search for the account you provided and follow the first match. Sometimes there will be nicks in the channel which you are not following, e.g. a nick is automatically added to the channel when a status of theirs mentioning you is shown.
 
+This only works for accounts known on your instance. If you're the first one on your instance, you need to interact with the account such that your instance "imports" the remote account. The easiest way to do that is to use the **timeline &lt;@account&gt;** command. this automatically adds the account to your instance if it is missing, and the nick to your channel, making it easy to follow.
+
 Use **unfollow &lt;nick&gt;** to unfollow a nick. Synonyms: **allow**.
 
 ## block
@@ -383,7 +385,7 @@ Use **search &lt;what&gt;** to search for all these things.
 
 You can also search for a specific status by searching the URL of said status. This sounds strange but it will allow you to boost it, for example.
 
-If you want to show the statuses for a specific account or a hashtag, use **timeline &lt;nick|#hashtag&gt;**.
+If you want to show the statuses for a specific account, even a remote one, or a hashtag, use **timeline &lt;nick|@account|#hashtag&gt;**.
 
 If you want to subscribe to a particular hashtag, see *[hashtag](#hashtag)* for more.
 
