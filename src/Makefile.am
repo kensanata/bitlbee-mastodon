@@ -35,5 +35,7 @@ mastodon_la_SOURCES = \
 	mastodon-http.h \
 	mastodon-lib.c \
 	mastodon-lib.h \
+	mastodon-websockets.c \
+	mastodon-websockets.h \
 	rot13.c \
 	rot13.h

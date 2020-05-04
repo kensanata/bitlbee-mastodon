@@ -26,6 +26,7 @@
 
 #include "nogaim.h"
 #include "mastodon-http.h"
+#include "json.h"
 
 #define MASTODON_DEFAULT_INSTANCE "https://octodon.social"
 
@@ -33,18 +34,27 @@
 #define MASTODON_TIME_FORMAT "%Y-%m-%dT%H:%M:%S"
 
 #define MASTODON_API(version) "/api/v" #version
-#define MASTODON_REGISTER_APP_URL MASTODON_API(1) "/apps"
-#define MASTODON_VERIFY_CREDENTIALS_URL MASTODON_API(1) "/accounts/verify_credentials"
-#define MASTODON_STREAMING_USER_URL      MASTODON_API(1) "/streaming/user"
-#define MASTODON_STREAMING_HASHTAG_URL   MASTODON_API(1) "/streaming/hashtag"
-#define MASTODON_STREAMING_LOCAL_URL     MASTODON_API(1) "/streaming/public/local"
-#define MASTODON_STREAMING_FEDERATED_URL MASTODON_API(1) "/streaming/public"
-#define MASTODON_STREAMING_LIST_URL      MASTODON_API(1) "/streaming/list"
+#define MASTODON_REGISTER_APP_URL        MASTODON_API(1) "/apps"
+#define MASTODON_VERIFY_CREDENTIALS_URL  MASTODON_API(1) "/accounts/verify_credentials"
 #define MASTODON_HOME_TIMELINE_URL       MASTODON_API(1) "/timelines/home"
 #define MASTODON_PUBLIC_TIMELINE_URL     MASTODON_API(1) "/timelines/public"
 #define MASTODON_HASHTAG_TIMELINE_URL    MASTODON_API(1) "/timelines/tag/%s"
 #define MASTODON_LIST_TIMELINE_URL       MASTODON_API(1) "/timelines/list/%" G_GINT64_FORMAT
 #define MASTODON_NOTIFICATIONS_URL       MASTODON_API(1) "/notifications"
+
+/* Streaming URLs */
+#define MASTODON_STREAMING_USER_URL      MASTODON_API(1) "/streaming/user"
+#define MASTODON_STREAMING_HASHTAG_URL   MASTODON_API(1) "/streaming/hashtag"
+#define MASTODON_STREAMING_LOCAL_URL     MASTODON_API(1) "/streaming/public/local"
+#define MASTODON_STREAMING_FEDERATED_URL MASTODON_API(1) "/streaming/public"
+#define MASTODON_STREAMING_LIST_URL      MASTODON_API(1) "/streaming/list"
+
+/* Websocket URLs */
+#define MASTODON_WEBSOCKET_USER_URL      MASTODON_API(1) "/streaming?stream=user"
+#define MASTODON_WEBSOCKET_HASHTAG_URL   MASTODON_API(1) "/streaming?stream=hashtag&tag=%s"
+#define MASTODON_WEBSOCKET_LOCAL_URL     MASTODON_API(1) "/streaming?stream=public:local"
+#define MASTODON_WEBSOCKET_FEDERATED_URL MASTODON_API(1) "/streaming?stream=public"
+#define MASTODON_WEBSOCKET_LIST_URL      MASTODON_API(1) "/streaming?stream=list&list=%" G_GINT64_FORMAT
 
 #define MASTODON_REPORT_URL MASTODON_API(1) "/reports"
 #define MASTODON_SEARCH_URL MASTODON_API(2) "/search"
@@ -103,12 +113,8 @@ void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag);
 void mastodon_home_timeline(struct im_connection *ic);
 void mastodon_local_timeline(struct im_connection *ic);
 void mastodon_federated_timeline(struct im_connection *ic);
-void mastodon_open_user_stream(struct im_connection *ic);
 void mastodon_unknown_list_timeline(struct im_connection *ic, char *title);
-struct http_request *mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag);
-struct http_request *mastodon_open_local_stream(struct im_connection *ic);
-struct http_request *mastodon_open_federated_stream(struct im_connection *ic);
-void mastodon_open_unknown_list_stream(struct im_connection *ic, struct groupchat *c, char *title);
+void mastodon_open_unknown_list(struct im_connection *ic, struct groupchat *c, char *title);
 mastodon_visibility_t mastodon_default_visibility(struct im_connection *ic);
 mastodon_visibility_t mastodon_parse_visibility(char *value);
 char *mastodon_visibility(mastodon_visibility_t visibility);
@@ -148,3 +154,6 @@ void mastodon_filters_destroy(struct mastodon_data *md);
 void mastodon_filters(struct im_connection *ic);
 void mastodon_filter_create(struct im_connection *ic, char *str);
 void mastodon_filter_delete(struct im_connection *ic, char *arg);
+
+void mastodon_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type,
+						   json_value *parsed, mastodon_timeline_type_t subscription);

@@ -30,6 +30,7 @@
 #include "oauth2.h"
 #include "mastodon.h"
 #include "mastodon-http.h"
+#include "mastodon-websockets.h"
 #include "mastodon-lib.h"
 #include "rot13.h"
 #include "url.h"
@@ -429,7 +430,8 @@ static void mastodon_connect(struct im_connection *ic)
 	}
 
 	mastodon_initial_timeline(ic);
-	mastodon_open_user_stream(ic);
+	mastodon_open_user_websocket(ic);
+
 	ic->flags |= OPT_PONGS;
 }
 
@@ -539,12 +541,13 @@ static void mastodon_logout(struct im_connection *ic)
 		}
 
 		GSList *l;
-		for (l = md->streams; l; l = l->next) {
-			struct http_request *req = l->data;
-			http_close(req);
+
+		for (l = md->websockets; l; l = l->next) {
+			struct mastodon_websocket *mw = l->data;
+			mw_free(mw);
 		}
 
-		g_slist_free(md->streams); md->streams = NULL;
+		g_slist_free(md->websockets); md->websockets = NULL;
 
 		if (md->log) {
 			/* When mastodon_connect hasn't been called, yet, such as when imc_logout is being called from
@@ -848,7 +851,7 @@ static void mastodon_chat_msg(struct groupchat *c, char *message, int flags)
 }
 
 /**
- * Joining a group chat means showing the appropriate timeline and start streaming it.
+ * Joining a group chat means showing the appropriate timeline and connecting a websocket.
  */
 static struct groupchat *mastodon_chat_join(struct im_connection *ic,
                                            const char *room, const char *nick,
@@ -858,16 +861,16 @@ static struct groupchat *mastodon_chat_join(struct im_connection *ic,
 	struct groupchat *c = imcb_chat_new(ic, topic);
 	imcb_chat_topic(c, NULL, topic, 0);
 	imcb_chat_add_buddy(c, ic->acc->user);
-	struct http_request *req = NULL;
+	struct mastodon_websocket *mw = NULL;
 	if (strcmp(topic, "local") == 0) {
 		mastodon_local_timeline(ic);
-		req = mastodon_open_local_stream(ic);
+		mw = mastodon_open_local_websocket(ic);
 	} else if (strcmp(topic, "federated") == 0) {
 		mastodon_federated_timeline(ic);
-		req = mastodon_open_federated_stream(ic);
+		mw = mastodon_open_federated_websocket(ic);
 	} else if (topic[0] == '#') {
 		mastodon_hashtag_timeline(ic, topic + 1);
-		req = mastodon_open_hashtag_stream(ic, topic + 1);
+		mw = mastodon_open_hashtag_websocket(ic, topic + 1);
 	} else {
 		/* After the initial login we cannot be sure that an initial list timeline will work because the lists are not
 		   loaded, yet. That's why mastodon_following() will end up reloading the lists with the extra parameter which
@@ -879,19 +882,19 @@ static struct groupchat *mastodon_chat_join(struct im_connection *ic,
 		if (md->flags & MASTODON_HAVE_FRIENDS) {
 			mastodon_unknown_list_timeline(ic, topic);
 		}
-		/* We need to identify the list we're going to stream but we don't get a request on the return from
-		   mastodon_open_unknown_list_stream(). Instead, we pass the channel along and when we have the list, the
-		   request will be set accordingly. */
-		mastodon_open_unknown_list_stream(ic, c, topic);
+		/* We need to identify the list to connect the websocket but we don't get a websocket on the return from
+		   mastodon_open_unknown_list. Instead, we pass the channel along and when we have the list, the
+		   websocket will be set accordingly. */
+		mastodon_open_unknown_list(ic, c, topic);
 	}
 	g_free(topic);
-	c->data = req;
+	c->data = mw;
 	return c;
 }
 
 /**
- * If the user leaves the main channel: Fine. Rejoin him/her once new toots come in. But what if the user leaves a
- * channel that is connected to a stream? In this case we need to find the appropriate stream and close it, too.
+ * If the user leaves the main channel: Fine. Rejoin him/her once new toots come in. If the user leaves a channel that
+ * is connected to a websocket, we need to find the websocket and close it, too.
  */
 static void mastodon_chat_leave(struct groupchat *c)
 {
@@ -900,15 +903,14 @@ static void mastodon_chat_leave(struct groupchat *c)
 
 	if (c == md->timeline_gc) {
 		md->timeline_gc = NULL;
-	} else {
-		struct http_request *stream = c->data;
-		for (l = md->streams; l; l = l->next) {
-			struct http_request *req = l->data;
-			if (stream == req) {
-				md->streams = g_slist_remove(md->streams, req);
-				http_close(req);
-				break;
-			}
+	}
+
+	for (l = md->websockets; l; l = l->next) {
+		if (c->data == l->data) {
+			struct mastodon_websocket *mw = l->data;
+			md->websockets = g_slist_remove(md->websockets, mw);
+			mw_free(mw);
+			break;
 		}
 	}
 

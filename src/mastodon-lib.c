@@ -37,20 +37,13 @@
 #include "misc.h"
 #include "base64.h"
 #include "mastodon-lib.h"
+#include "mastodon-websockets.h"
 #include "oauth2.h"
 #include "json.h"
 #include "json_util.h"
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
-
-typedef enum {
-	MT_HOME,
-	MT_LOCAL,
-	MT_FEDERATED,
-	MT_HASHTAG,
-	MT_LIST,
-} mastodon_timeline_type_t;
 
 typedef enum {
 	ML_STATUS,
@@ -1276,7 +1269,7 @@ static void mastodon_notification_show(struct im_connection *ic, struct mastodon
 /**
  * Add exactly one notification to the timeline.
  */
-static void mastodon_stream_handle_notification(struct im_connection *ic, json_value *parsed, mastodon_timeline_type_t subscription)
+static void mastodon_handle_notification(struct im_connection *ic, json_value *parsed, mastodon_timeline_type_t subscription)
 {
 	struct mastodon_notification *mn = mastodon_xt_get_notification(parsed, ic);
 	if (mn) {
@@ -1292,19 +1285,21 @@ static void mastodon_stream_handle_notification(struct im_connection *ic, json_v
 /**
  * Add exactly one status to the timeline.
  */
-static void mastodon_stream_handle_update(struct im_connection *ic, json_value *parsed, mastodon_timeline_type_t subscription)
+static void mastodon_handle_update(struct im_connection *ic, json_value *parsed, mastodon_timeline_type_t subscription)
 {
 	struct mastodon_status *ms = mastodon_xt_get_status(parsed, ic);
 	if (ms) {
 		ms->subscription = subscription;
 		mastodon_status_show(ic, ms);
 		ms_free(ms);
+	} else {
+		imcb_log(ic, "unable to parse status of update event");
 	}
 }
 
 /* Let the user know if a status they have recently seen was deleted. If we can't find the deleted status in our list of
  * recently seen statuses, ignore the event. */
-static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *parsed)
+static void mastodon_handle_delete(struct im_connection *ic, json_value *parsed)
 {
 	struct mastodon_data *md = ic->proto_data;
 	guint64 id = mastodon_json_int64(parsed);
@@ -1322,230 +1317,50 @@ static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *
 	}
 }
 
-static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type,
+void mastodon_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type,
 					 json_value *parsed, mastodon_timeline_type_t subscription)
 {
 	if (evt_type == MASTODON_EVT_UPDATE) {
-		mastodon_stream_handle_update(ic, parsed, subscription);
+		mastodon_handle_update(ic, parsed, subscription);
 	} else if (evt_type == MASTODON_EVT_NOTIFICATION) {
-		mastodon_stream_handle_notification(ic, parsed, subscription);
+		mastodon_handle_notification(ic, parsed, subscription);
 	} else if (evt_type == MASTODON_EVT_DELETE) {
-		mastodon_stream_handle_delete(ic, parsed);
+		mastodon_handle_delete(ic, parsed);
 	} else {
 		mastodon_log(ic, "Ignoring event type %d", evt_type);
 	}
 }
 
 /**
- * When streaming, we also want to tag the events appropriately. This only affects updates, for now.
+ * Second callback. Now we have mc->id and we're good to go. As this is the place where we finally have the websocket,
+ * this is where we set it on the channel.
  */
-static void mastodon_http_stream(struct http_request *req, mastodon_timeline_type_t subscription)
-{
-	struct im_connection *ic = req->data;
-	struct mastodon_data *md = ic->proto_data;
-	int len = 0;
-	char *nl;
-
-	if (!g_slist_find(mastodon_connections, ic)) {
-		return;
-	}
-
-	if ((req->flags & HTTPC_EOF) || !req->reply_body) {
-		md->streams = g_slist_remove (md->streams, req);
-		imcb_error(ic, "Stream closed (%s)", req->status_string);
-		imc_logout(ic, TRUE);
-		return;
-	}
-
-	/* It doesn't matter which stream sent us something. */
-	ic->flags |= OPT_PONGED;
-
-	/*
-https://github.com/tootsuite/documentation/blob/master/Using-the-API/Streaming-API.md
-https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format
-	*/
-
-	if (req->reply_body[0] == ':' &&
-	    (nl = strchr(req->reply_body, '\n'))) {
-		// found a comment such as the heartbeat ":thump\n"
-		len = nl - req->reply_body + 1;
-		goto end;
-	} else if (!(nl = strstr(req->reply_body, "\n\n"))) {
-		// wait until we have a complete event
-		return;
-	}
-
-	// include the two newlines at the end
-	len = nl - req->reply_body + 2;
-
-	if (len > 0) {
-		char *p;
-		mastodon_evt_flags_t evt_type = MASTODON_EVT_UNKNOWN;
-
-		// assuming space after colon
-		if (strncmp(req->reply_body, "event: ", 7) == 0) {
-			p = req->reply_body + 7;
-			if (strncmp(p, "update\n", 7) == 0) {
-				evt_type = MASTODON_EVT_UPDATE;
-				p += 7;
-			} else if (strncmp(p, "notification\n", 13) == 0) {
-				evt_type = MASTODON_EVT_NOTIFICATION;
-				p += 13;
-			} else if (strncmp(p, "delete\n", 7) == 0) {
-				evt_type = MASTODON_EVT_DELETE;
-				p += 7;
-			}
-		}
-
-		if (evt_type != MASTODON_EVT_UNKNOWN) {
-
-			GString *data = g_string_new("");
-			char* q;
-
-			while (strncmp(p, "data: ", 6) == 0) {
-				p += 6;
-				q = strchr(p, '\n');
-				p[q-p] = '\0';
-				g_string_append(data, p);
-				p = q + 1;
-			}
-
-			json_value *parsed;
-			if ((parsed = json_parse(data->str, data->len))) {
-				mastodon_stream_handle_event(ic, evt_type, parsed, subscription);
-				json_value_free(parsed);
-			}
-
-			g_string_free(data, TRUE);
-		}
-	}
-
-end:
-	http_flush_bytes(req, len);
-
-	/* We might have multiple events */
-	if (req->body_size > 0) {
-		mastodon_http_stream(req, subscription);
-	}
-}
-
-static void mastodon_http_stream_user(struct http_request *req)
-{
-	mastodon_http_stream(req, MT_HOME);
-}
-
-static void mastodon_http_stream_hashtag(struct http_request *req)
-{
-	mastodon_http_stream(req, MT_HASHTAG);
-}
-
-static void mastodon_http_stream_local(struct http_request *req)
-{
-	mastodon_http_stream(req, MT_LOCAL);
-}
-
-static void mastodon_http_stream_federated(struct http_request *req)
-{
-	mastodon_http_stream(req, MT_FEDERATED);
-}
-
-static void mastodon_http_stream_list(struct http_request *req)
-{
-	mastodon_http_stream(req, MT_LIST);
-}
-
-/**
- * Make sure a request continues stream instead of closing.
- */
-void mastodon_stream(struct im_connection *ic, struct http_request *req)
-{
-	struct mastodon_data *md = ic->proto_data;
-	if (req) {
-		req->flags |= HTTPC_STREAMING;
-		md->streams = g_slist_prepend(md->streams, req);
-	}
-}
-
-/**
- * Open the user (home) timeline.
- */
-void mastodon_open_user_stream(struct im_connection *ic)
-{
-	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_USER_URL,
-						 mastodon_http_stream_user, ic, HTTP_GET, NULL, 0);
-	mastodon_stream(ic, req);
-}
-
-/**
- * Open a stream for a hashtag timeline and return the request.
- */
-struct http_request *mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag)
-{
-	char *args[2] = {
-		"tag", hashtag,
-	};
-
-	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_HASHTAG_URL,
-						 mastodon_http_stream_hashtag, ic, HTTP_GET, args, 2);
-	mastodon_stream(ic, req);
-	return req;
-}
-
-/**
- * Part two of the first callback: now we have mc->id. Now we're good to go.
- */
-void mastodon_list_stream(struct im_connection *ic, struct mastodon_command *mc) {
-	char *args[2] = {
-		"list", g_strdup_printf("%" G_GINT64_FORMAT, mc->id),
-	};
-
-	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_LIST_URL,
-						 mastodon_http_stream_list, ic, HTTP_GET, args, 2);
-	mastodon_stream(ic, req);
-	/* We cannot return req here because this is a callback (as we had to figure out the list id before getting here).
-	 * This is why we must rely on the groupchat being part of mastodon_command (mc). */
+void mastodon_open_unknown_list2(struct im_connection *ic, struct mastodon_command *mc) {
+	struct mastodon_websocket *mw = mastodon_open_list_websocket(ic, mc->id);
+	/* We rely on the groupchat being part of mastodon_command (mc). */
 	struct groupchat *c = (struct groupchat *) mc->data;
-	c->data = req;
+	c->data = mw;
 }
 
 /**
- * First callback to show the stream for a list. We need to parse the lists and find the one we're looking for, then
- * make our next request with the list id.
+ * First callback. We need to parse the lists and find the one we're looking for, then make our next request with the
+ * list id.
  */
-static void mastodon_http_list_stream(struct http_request *req)
+static void mastodon_open_unknown_list1(struct http_request *req)
 {
-	mastodon_chained_list(req, mastodon_list_stream);
+	mastodon_chained_list(req, mastodon_open_unknown_list2);
 }
 
-void mastodon_open_unknown_list_stream(struct im_connection *ic, struct groupchat *c, char *title)
+/**
+ * Start the chain of requests that gets us the correct list id with which we can figure out the actual URL to open.
+ */
+void mastodon_open_unknown_list(struct im_connection *ic, struct groupchat *c, char *title)
 {
 	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
 	mc->ic = ic;
 	mc->data = (gpointer *) c;
 	mc->str = g_strdup(title);
-	mastodon_with_named_list(ic, mc, mastodon_http_list_stream);
-}
-
-/**
- * Open a stream for the local timeline and return the request.
- */
-struct http_request *mastodon_open_local_stream(struct im_connection *ic)
-{
-	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_LOCAL_URL,
-						 mastodon_http_stream_local, ic, HTTP_GET, NULL, 0);
-	mastodon_stream(ic, req);
-	return req;
-}
-
-/**
- * Open a stream for the federated timeline and return the request.
- */
-struct http_request *mastodon_open_federated_stream(struct im_connection *ic)
-{
-	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_FEDERATED_URL,
-						 mastodon_http_stream_federated, ic, HTTP_GET, NULL, 0);
-	mastodon_stream(ic, req);
-	return req;
+	mastodon_with_named_list(ic, mc, mastodon_open_unknown_list1);
 }
 
 /**
