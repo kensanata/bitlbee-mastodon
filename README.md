@@ -65,8 +65,10 @@ trying it.
 In your **&bitlbee** channel, add a new account, change it's
 **base_url** to point at your instance, and switch it on:
 
-> **&lt;kensanata&gt;** account add mastodon kensanata@mastodon.weaponvsac.space
+> **&lt;kensanata&gt;** account add mastodon @kensanata  
 > **&lt;root&gt;** Account successfully added with tag mastodon  
+> **&lt;kensanata&gt;** account mastodon set base_url https://mastodon.weaponvsac.space  
+> **&lt;root&gt;** base_url = &#x60;https://mastodon.weaponvsac.space  
 > **&lt;kensanata&gt;** account mastodon on  
 > **&lt;root&gt;** mastodon - Logging in: Login  
 > **&lt;root&gt;** mastodon - Logging in: Parsing application registration response  
