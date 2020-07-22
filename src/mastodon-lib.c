@@ -2596,11 +2596,12 @@ void mastodon_http_search(struct http_request *req)
  */
 void mastodon_search(struct im_connection *ic, char *what)
 {
-	char *args[2] = {
+	char *args[4] = {
 		"q", what,
+		"resolve", "1",
 	};
 
-	mastodon_http(ic, MASTODON_SEARCH_URL, mastodon_http_search, ic, HTTP_GET, args, 2);
+	mastodon_http(ic, MASTODON_SEARCH_URL, mastodon_http_search, ic, HTTP_GET, args, 4);
 }
 
 /**
