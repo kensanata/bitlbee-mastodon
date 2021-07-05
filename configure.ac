@@ -16,7 +16,7 @@
 
 AC_INIT(
   [bitlbee-mastodon],
-  [1.4.4],
+  [1.4.5],
   [https://github.com/kensanata/bitlbee-mastodon/issues],
   [bitlbee-mastodon],
   [https://alexschroeder.ch/cgit/bitlbee-mastodon/about/],

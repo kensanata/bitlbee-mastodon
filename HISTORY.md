@@ -1,5 +1,10 @@
 # The History of this Plugin
 
+New features for 1.4.5:
+
+- fix timeline command for accounts
+- add resolve=1 to status URL search so foreign statuses get imported
+
 New features for 1.4.4:
 
 - fix list management command
