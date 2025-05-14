@@ -43,7 +43,7 @@
 #define MASTODON_HOME_TIMELINE_URL       MASTODON_API(1) "/timelines/home"
 #define MASTODON_PUBLIC_TIMELINE_URL     MASTODON_API(1) "/timelines/public"
 #define MASTODON_HASHTAG_TIMELINE_URL    MASTODON_API(1) "/timelines/tag/%s"
-#define MASTODON_LIST_TIMELINE_URL       MASTODON_API(1) "/timelines/list/%" G_GINT64_FORMAT
+#define MASTODON_LIST_TIMELINE_URL       MASTODON_API(1) "/timelines/list/%" G_GUINT64_FORMAT
 #define MASTODON_NOTIFICATIONS_URL       MASTODON_API(1) "/notifications"
 
 #define MASTODON_REPORT_URL MASTODON_API(1) "/reports"
@@ -51,7 +51,7 @@
 
 #define MASTODON_INSTANCE_URL MASTODON_API(1) "/instance"
 
-#define MASTODON_ID_FORMAT(prefix,suffix) MASTODON_API(1) "/" prefix "/%" G_GINT64_FORMAT suffix
+#define MASTODON_ID_FORMAT(prefix,suffix) MASTODON_API(1) "/" prefix "/%" G_GUINT64_FORMAT suffix
 
 #define MASTODON_STATUS_FORMAT(suffix)  MASTODON_ID_FORMAT("statuses",suffix)
 #define MASTODON_STATUS_POST_URL        MASTODON_API(1) "/statuses"
@@ -84,7 +84,7 @@
 #define MASTODON_LIST_ACCOUNTS_URL   MASTODON_LIST_FORMAT("/accounts")
 
 #define MASTODON_FILTER_URL MASTODON_API(1) "/filters"
-#define MASTODON_FILTER_DATA_URL MASTODON_API(1) "/filters/%" G_GINT64_FORMAT
+#define MASTODON_FILTER_DATA_URL MASTODON_API(1) "/filters/%" G_GUINT64_FORMAT
 
 #define MASTODON_ACCOUNT_RELATIONSHIP_URL MASTODON_API(1) "/accounts/relationships"
 

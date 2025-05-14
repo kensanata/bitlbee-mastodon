@@ -285,7 +285,7 @@ static gint mastodon_compare_elements(gconstpointer a, gconstpointer b)
 /**
  * Add a buddy if it is not already added, set the status to logged in.
  */
-static void mastodon_add_buddy(struct im_connection *ic, gint64 id, char *name, const char *fullname)
+static void mastodon_add_buddy(struct im_connection *ic, guint64 id, char *name, const char *fullname)
 {
 	struct mastodon_data *md = ic->proto_data;
 
@@ -585,7 +585,9 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 		} else if (strcmp("mentions", k) == 0 && v->type == json_array) {
 			GSList *l = NULL;
 			int i;
-			gint64 id = set_getint(&ic->acc->set, "account_id");
+			guint64 id;
+			char *sid = set_getstr(&ic->acc->set, "account_id");
+			parse_int64(sid, 10, &id);
 			for (i = 0; i < v->u.array.length; i++) {
 				struct mastodon_account *ma = mastodon_xt_get_user(v->u.array.values[i]);
 				/* Skip the current user in mentions since we're only interested in this information for replies where
@@ -637,7 +639,9 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node, st
 			rms->mentions = NULL;
 
 			/* add original author to mentions of boost if not ourselves */
-			gint64 id = set_getint(&ic->acc->set, "account_id");
+			guint64 id;
+			char *sid = set_getstr(&ic->acc->set, "account_id");
+			parse_int64(sid, 10, &id);
 			if (rms->account->id != id) {
 				ms->mentions = g_slist_prepend(ms->mentions, rms->account); // adopt
 				rms->account = NULL;
@@ -866,7 +870,9 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 		g_free(md->log[idx].spoiler_text);
 		md->log[idx].spoiler_text = g_strdup(ms->spoiler_text); // no problem if NULL
 
-		gint64 id = set_getint(&ic->acc->set, "account_id");
+		guint64 id;
+		char *sid = set_getstr(&ic->acc->set, "account_id");
+		parse_int64(sid, 10, &id);
 		if (ms->account->id == id) {
 			/* If this is our own status, use a fake bu without data since we can't be found by handle. This
 			 * will allow us to reply to our own messages, for example. */
@@ -946,7 +952,9 @@ static void mastodon_status_show_chat1(struct im_connection *ic, gboolean me, st
  * to put those statuses into the user timeline if they do not. */
 static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_status *status)
 {
-	gint64 id = set_getint(&ic->acc->set, "account_id");
+	guint64 id;
+	char *sid = set_getstr(&ic->acc->set, "account_id");
+	parse_int64(sid, 10, &id);
 	gboolean me = (status->account->id == id);
 
 	if (!me) {
@@ -1031,7 +1039,9 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 	struct mastodon_data *md = ic->proto_data;
 	char from[MAX_STRING] = "";
 	char *text = NULL;
-	gint64 id = set_getint(&ic->acc->set, "account_id");
+	guint64 id;
+	char *sid = set_getstr(&ic->acc->set, "account_id");
+	parse_int64(sid, 10, &id);
 	gboolean me = (ms->account->id == id);
 	char *name = set_getstr(&ic->acc->set, "name");
 
@@ -1496,7 +1506,7 @@ struct http_request *mastodon_open_hashtag_stream(struct im_connection *ic, char
  */
 void mastodon_list_stream(struct im_connection *ic, struct mastodon_command *mc) {
 	char *args[2] = {
-		"list", g_strdup_printf("%" G_GINT64_FORMAT, mc->id),
+		"list", g_strdup_printf("%" G_GUINT64_FORMAT, mc->id),
 	};
 
 	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_LIST_URL,
@@ -1983,7 +1993,9 @@ static void mastodon_http_callback(struct http_request *req)
 		break;
 	case MC_POST:
 		ms = mastodon_xt_get_status(parsed, ic);
-		gint64 id = set_getint(&ic->acc->set, "account_id");
+		guint64 id;
+		char *sid = set_getstr(&ic->acc->set, "account_id");
+		parse_int64(sid, 10, &id);
 		if (ms && ms->id && ms->account->id == id) {
 			/* we posted this status */
 			md->last_id = ms->id;
@@ -2273,7 +2285,7 @@ void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_
 
 /**
  * Generic POST request taking a numeric ID. The format string must contain one placeholder for the ID, like
- * "/accounts/%" G_GINT64_FORMAT "/mute".
+ * "/accounts/%" G_GUINT64_FORMAT "/mute".
  */
 void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type_t command, guint64 id)
 {
@@ -2379,7 +2391,9 @@ void mastodon_http_status_delete(struct http_request *req)
 	/* Maintain undo/redo list. */
 	struct mastodon_status *ms = mastodon_xt_get_status(parsed, ic);
 	struct mastodon_data *md = ic->proto_data;
-	gint64 id = set_getint(&ic->acc->set, "account_id");
+	guint64 id;
+	char *sid = set_getstr(&ic->acc->set, "account_id");
+	parse_int64(sid, 10, &id);
 	if (ms && ms->id && ms->account->id == id) {
 		/* we deleted our own status */
 		md->last_id = ms->id;
@@ -3443,7 +3457,9 @@ finish:
  */
 void mastodon_following(struct im_connection *ic)
 {
-	gint64 id = set_getint(&ic->acc->set, "account_id");
+	guint64 id;
+	char *sid = set_getstr(&ic->acc->set, "account_id");
+	parse_int64(sid, 10, &id);
 
 	if (!id) {
 		return;
@@ -3645,7 +3661,7 @@ void mastodon_http_list_delete2(struct http_request *req) {
 
 			if (ma) {
 				g_string_append(undo, FS);
-				g_string_append_printf(undo, "list add %" G_GINT64_FORMAT " to %s", ma->id, title);
+				g_string_append_printf(undo, "list add %" G_GUINT64_FORMAT " to %s", ma->id, title);
 			}
 			ma_free(ma);
 		}
@@ -3746,8 +3762,8 @@ void mastodon_unknown_list_add_account(struct im_connection *ic, guint64 id, cha
 	struct mastodon_data *md = ic->proto_data;
 	if (md->undo_type == MASTODON_NEW) {
 		mc->command = MC_LIST_ADD_ACCOUNT;
-		mc->redo = g_strdup_printf("list add %" G_GINT64_FORMAT " to %s", id, title);
-		mc->undo = g_strdup_printf("list remove %" G_GINT64_FORMAT " from %s", id, title);
+		mc->redo = g_strdup_printf("list add %" G_GUINT64_FORMAT " to %s", id, title);
+		mc->undo = g_strdup_printf("list remove %" G_GUINT64_FORMAT " from %s", id, title);
 	}
 	mastodon_with_named_list(ic, mc, mastodon_http_list_add_account);
 }
@@ -3785,8 +3801,8 @@ void mastodon_unknown_list_remove_account(struct im_connection *ic, guint64 id, 
 	struct mastodon_data *md = ic->proto_data;
 	if (md->undo_type == MASTODON_NEW) {
 		mc->command = MC_LIST_REMOVE_ACCOUNT;
-		mc->redo = g_strdup_printf("list remove %" G_GINT64_FORMAT " from %s", id, title);
-		mc->undo = g_strdup_printf("list add %" G_GINT64_FORMAT " to %s", id, title);
+		mc->redo = g_strdup_printf("list remove %" G_GUINT64_FORMAT " from %s", id, title);
+		mc->undo = g_strdup_printf("list add %" G_GUINT64_FORMAT " to %s", id, title);
 	}
 	mastodon_with_named_list(ic, mc, mastodon_http_list_remove_account);
 }
@@ -4255,7 +4271,7 @@ static void mastodon_http_verify_credentials(struct http_request *req)
 		guint64 id;
 		if ((it = json_o_get(parsed, "id")) &&
 		    (id = mastodon_json_int64(it))) {
-			set_setint(&ic->acc->set, "account_id", id);
+			set_setstr(&ic->acc->set, "account_id", g_strdup_printf("%" G_GUINT64_FORMAT, id));
 		}
 		json_value_free(parsed);
 
