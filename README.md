@@ -13,10 +13,6 @@ you want to connect to Mastodon.
 
 ![A screenshot of Emacs running the rcirc IRC client connected to a Mastodon instance via Bitlbee](pics/screenshot.png)
 
-Please report issues using the
-[Software Wiki](https://alexschroeder.ch/software/Bitlbee_Mastodon).
-For questions, ping **kensanata** on `irc.oftc.net/#bitlbee`.
-
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
@@ -119,7 +115,32 @@ Build dependencies
   If you haven't built Bitlbee yourself you will need to install the
   dev package, usually `bitlbee-dev` or `bitlbee-devel`. If Bitlbee
   was built from source don't forget to do `make install-dev`.
+
+  If you get an error message when running `./configure` about not
+  having a recent enough Bitlbee, check the `bitlbee.pc` file. If you
+  compiled Bitlbee yourself, it might be in
+  `/usr/local/lib/pkgconfig/`. It should have a `Version` field. If
+  that version is empty, then you can either put one there, or remove
+  the version check in `configure.ac` as follows:
   
+  ```
+  diff --git i/configure.ac w/configure.ac
+  index 6ef97ce..fa5b03c 100644
+  --- i/configure.ac
+  +++ w/configure.ac
+  @@ -44,7 +44,7 @@ m4_define_default(
+   )
+
+   # Checks for libraries.
+  -PKG_CHECK_MODULES([BITLBEE], [bitlbee >= 3.5])
+  +PKG_CHECK_MODULES([BITLBEE], [bitlbee])
+   PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.32])
+
+   AC_CONFIG_HEADERS([config.h])
+  ```
+
+  Then rerun `./autogen.sh` and `./configure`.
+
   To NetBSD users: your Bitlbee doesn't include the devel files.
   One way to fix this is to build Bitlbee via `pkgsrc`. You'll need
   to add to the `chat/bitlbee` pkgsrc `Makefile`, in the `post-build`
@@ -147,10 +168,12 @@ Build dependencies
   A bit of an overkill, but it works. If you don't have this package,
   try looking for `autoconf` and `libtool`.
   
-  \*BSD users should install `autoconf`, `automake` and `libtool`, 
-  preferably the latest version available. FreeBSD will also need 
-  `pkgconfig` on top of that. GNU `sed` (gsed), GNU `make` (gmake), and the `bash` shell are also required -- BSD `make` cannot successfully build bitlbee-mastodon, and the build process uses GNU extensions to both the Bourne shell and `sed`.
-
+  \*BSD users should install `autoconf`, `automake` and `libtool`,
+  preferably the latest version available. FreeBSD will also need
+  `pkgconfig` on top of that. GNU `sed` (gsed), GNU `make` (gmake),
+  and the `bash` shell are also required -- BSD `make` cannot
+  successfully build bitlbee-mastodon, and the build process uses GNU
+  extensions to both the Bourne shell and `sed`.
 
 Building and Installing
 -----------------------
