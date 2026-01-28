@@ -2093,9 +2093,9 @@ static char *indent(int n)
 /**
  * Return a static yes or no string. No deallocation needed.
  */
-static char *yes_or_no(int bool)
+static char *yes_or_no(int b)
 {
-	return bool ? "yes" : "no";
+	return b ? "yes" : "no";
 }
 
 /**
